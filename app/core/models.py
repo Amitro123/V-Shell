@@ -15,6 +15,9 @@ class GitTool(str, Enum):
     RESET = "git_reset"
     CHECKOUT_BRANCH = "git_checkout_branch"
     CREATE_BRANCH = "git_create_branch"
+    RUN_TESTS = "run_tests"
+    SMART_COMMIT_PUSH = "smart_commit_push"
+    PULL = "git_pull"
     HELP = "help"
 class ToolCall(BaseModel):
     """Parsed intent as a structured tool call."""

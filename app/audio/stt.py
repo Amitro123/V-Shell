@@ -42,7 +42,7 @@ class Transcriber:
             except Exception as e:
                 logger.error(f"Failed to initialize faster-whisper: {e}")
 
-    def transcribe(self, audio_input: Union[str, bytes]) -> STTResult:
+    async def transcribe(self, audio_input: Union[str, bytes]) -> STTResult:
         """
         Transcribes audio to text.
         Accepts file path (str) or raw audio bytes.
@@ -87,12 +87,24 @@ class Transcriber:
                 if isinstance(audio_input, str):
                     # faster-whisper accepts file path directly
                     segments, info = self.whisper_model.transcribe(audio_input, beam_size=5)
-                    text = " ".join([segment.text for segment in segments]).strip()
+                    # Convert segments generator to list for logging
+                    segments_list = list(segments)
+                    logger.info(f"Raw whisper segments: {segments_list}")
+                    text = " ".join([segment.text for segment in segments_list]).strip()
+                    language = info.language if hasattr(info, 'language') else 'unknown'
+                    language_probability = info.language_probability if hasattr(info, 'language_probability') else 0.0
+                    logger.info(f"Final text: {text!r}, language: {language}, probability: {language_probability}")
                 elif isinstance(audio_input, bytes):
                     # faster-whisper expects float32 numpy array
                     audio_array = np.frombuffer(audio_input, dtype=np.int16).astype(np.float32) / 32768.0
                     segments, info = self.whisper_model.transcribe(audio_array, beam_size=5)
-                    text = " ".join([segment.text for segment in segments]).strip()
+                    # Convert segments generator to list for logging
+                    segments_list = list(segments)
+                    logger.info(f"Raw whisper segments: {segments_list}")
+                    text = " ".join([segment.text for segment in segments_list]).strip()
+                    language = info.language if hasattr(info, 'language') else 'unknown'
+                    language_probability = info.language_probability if hasattr(info, 'language_probability') else 0.0
+                    logger.info(f"Final text: {text!r}, language: {language}, probability: {language_probability}")
             
             else:
                 logger.error("No valid STT provider configured or initialized.")

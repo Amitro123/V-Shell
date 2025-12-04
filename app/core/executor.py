@@ -1,6 +1,7 @@
 import logging
 import git
 from typing import Any, Dict, Optional
+import subprocess
 from app.core.models import ToolCall, GitTool, CommandResult, AppConfig
 
 logger = logging.getLogger(__name__)
@@ -8,8 +9,9 @@ logger = logging.getLogger(__name__)
 class GitExecutor:
     """Executes Git commands safely."""
     
-    def __init__(self, config: AppConfig):
+    def __init__(self, config: AppConfig, brain=None):
         self.config = config
+        self.brain = brain
         try:
             self.repo = git.Repo(search_parent_directories=True)
             logger.info(f"Initialized GitExecutor in repo: {self.repo.working_dir}")
@@ -49,6 +51,12 @@ class GitExecutor:
                 return self._git_checkout(**params)
             elif tool == GitTool.CREATE_BRANCH:
                 return self._git_create_branch(**params)
+            elif tool == GitTool.RUN_TESTS:
+                return self._run_tests()
+            elif tool == GitTool.PULL:
+                return self._git_pull(**params)
+            elif tool == GitTool.SMART_COMMIT_PUSH:
+                return self._smart_commit_push()
             elif tool == GitTool.HELP:
                 return CommandResult(success=True, stdout="I can help you with git commands. Try 'git status' or 'commit changes'.")
             else:
@@ -109,3 +117,70 @@ class GitExecutor:
     def _git_create_branch(self, branch: str) -> CommandResult:
         self.repo.git.checkout("-b", branch)
         return CommandResult(success=True, stdout=f"Created and switched to branch '{branch}'")
+
+    def _run_tests(self) -> CommandResult:
+        """Runs the project tests using pytest."""
+        import sys
+        try:
+            # Run pytest using python -m pytest to ensure we use the same environment
+            result = subprocess.run(
+                [sys.executable, "-m", "pytest"], 
+                capture_output=True, 
+                text=True, 
+                check=False
+            )
+            if result.returncode == 0:
+                return CommandResult(success=True, stdout=result.stdout)
+            else:
+                return CommandResult(success=False, stderr=result.stdout + "\n" + result.stderr)
+        except Exception as e:
+            return CommandResult(success=False, stderr=f"Failed to run tests: {e}")
+
+    def _git_pull(self, remote: str = "origin", branch: Optional[str] = None) -> CommandResult:
+        if not branch:
+            branch = self.repo.active_branch.name
+        output = self.repo.git.pull(remote, branch)
+        return CommandResult(success=True, stdout=output)
+
+    def _smart_commit_push(self) -> CommandResult:
+        """Stages all changes, generates a commit message, commits, and pushes."""
+        if not self.brain:
+            return CommandResult(success=False, stderr="Brain not initialized for smart commit.")
+            
+        try:
+            # 1. Stage all changes
+            self.repo.git.add(".")
+            
+            # 2. Get diff for message generation
+            diff = self.repo.git.diff("--staged")
+            if not diff:
+                return CommandResult(success=False, stderr="No changes to commit.")
+                
+            # 3. Generate commit message
+            message = self.brain.generate_commit_message(diff)
+            
+            # 4. Interactive Confirmation
+            print(f"\nGenerated commit message: '{message}'")
+            confirm = input("Use this message? (yes/no/edit): ").strip().lower()
+            
+            if confirm in ("no", "n"):
+                return CommandResult(success=False, stderr="Smart commit cancelled by user.")
+            elif confirm in ("edit", "e"):
+                message = input("Enter commit message: ").strip()
+                if not message:
+                    return CommandResult(success=False, stderr="Empty commit message. Cancelled.")
+            
+            # 5. Commit
+            self.repo.git.commit("-m", message)
+            
+            # 6. Push
+            # Use current branch
+            branch = self.repo.active_branch.name
+            output = self.repo.git.push("origin", branch)
+            
+            return CommandResult(success=True, stdout=f"Committed and pushed: '{message}'\n{output}")
+            
+        except git.GitCommandError as e:
+            return CommandResult(success=False, stderr=f"Git operation failed: {e}")
+        except Exception as e:
+            return CommandResult(success=False, stderr=f"Smart commit failed: {e}")
