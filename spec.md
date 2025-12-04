@@ -24,21 +24,28 @@ Supported commands include:
 - `git add .`: Stage all changes.
 - `git commit`: Commit changes with AI-generated or user-provided messages.
 - `git push`: Push commits to remote.
+- `git pull`: Pull changes from remote.
 - `git reset`: specific reset modes (soft, mixed, hard).
 - `git checkout`: Switch branches.
 - `git branch`: Create new branches.
+- `smart commit`: Automatically stage, generate message (with user confirmation), commit, and push.
+- `run tests`: Run project tests (e.g., pytest).
 
 ### Safety & Configuration
-- **Confirmation**: Required for write/destructive operations (commit, push, reset, etc.).
+- **Tool Policies**: Granular control over safety and retries via `ToolPolicy`.
+    - **Confirmation**: Required for destructive actions (push, pull, commit, reset).
+    - **Retries**: Automatic retries for flaky commands (e.g., network issues, test failures).
 - **Configurable Providers**: Switch between different LLM and STT backends via `config.py` / `.env`.
+- **Metrics**: Usage logging to `metrics.jsonl` for debugging and analysis.
 
 ## Architecture
 
 1.  **Audio Input**: Captures user voice.
-2.  **STT Engine**: Transcribes audio to text.
+2.  **STT Engine**: Transcribes audio to text (English enforced).
 3.  **LLM Router**: Analyzes text to determine intent and extract parameters (Tool Calling).
-4.  **Git Executor**: Safely executes the determined Git command using `GitPython`.
-5.  **Feedback**: Returns success/failure status and output to the user (via CLI/TTS).
+4.  **Tool Policy**: Checks safety requirements and retry configuration.
+5.  **Git Executor**: Safely executes the determined Git command using `GitPython`.
+6.  **Feedback**: Returns success/failure status and output to the user (via CLI/TTS).
 
 ## Tech Stack
 - **Language**: Python 3.x

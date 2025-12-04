@@ -13,6 +13,7 @@ from app.core.executor import GitExecutor
 from app.core.models import GitTool
 from app.core.metrics import MetricsLogger
 from app.core.policies import TOOL_POLICIES, ToolPolicy
+from app.core.voice_flow import get_voice_confirmation
 
 # Configure logging
 logging.basicConfig(
@@ -42,7 +43,7 @@ async def main():
             recorder = AudioRecorder(config)
             transcriber = Transcriber(config)
             brain = Brain(config)
-            executor = GitExecutor(config, brain)
+            executor = GitExecutor(config, brain, recorder, transcriber, console)
             metrics_logger = MetricsLogger()
         except Exception as e:
             console.print(f"[bold red]Initialization failed:[/bold red] {e}")
@@ -56,8 +57,13 @@ async def main():
         # 1. Human Confirmation
         if policy.confirmation_required and config.require_confirmation_writes:
             console.print(f"[bold yellow]Safety Check:[/bold yellow] About to execute: {tool_call.tool.value} ({tool_call.params})")
-            if not Confirm.ask(f"[bold red]Are you sure?[/bold red]"):
-                console.print("[red]Cancelled by user.[/red]")
+            
+            # Use voice confirmation
+            prompt = f"About to execute {tool_call.tool.value}. Are you sure?"
+            is_confirmed = await get_voice_confirmation(prompt, recorder, transcriber, console)
+            
+            if not is_confirmed:
+                console.print("[red]Cancelled by user (voice).[/red]")
                 metrics_logger.log(raw_text, tool_call.tool.value, success=False, error="cancelled_by_user")
                 return
 
@@ -67,7 +73,7 @@ async def main():
             try:
                 with console.status(f"[dim]Executing {tool_call.tool.value} (attempt {i+1}/{attempts})...[/dim]"):
                     start_time = asyncio.get_event_loop().time()
-                    result = executor.execute(tool_call)
+                    result = await executor.execute(tool_call)
                     end_time = asyncio.get_event_loop().time()
                     duration = (end_time - start_time) * 1000
 

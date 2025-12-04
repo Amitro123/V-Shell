@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """
 You are a Git assistant. Your job is to map natural language commands to specific Git tools.
-You must return a JSON object matching the ToolCall schema.
+You must return a SINGLE JSON object matching the ToolCall schema. Do not return a list.
 
 Available tools:
 - git_status: Check status
@@ -34,6 +34,13 @@ Rules:
 - For "smart commit" or "commit and push", use smart_commit_push.
 - For "pull" or "update code", use git_pull.
 - If the user asks to "fix conflicts", use 'help' for now as it's not fully implemented.
+- For compound commands like "status and commit", "add and push", or "do everything", use smart_commit_push.
+
+Robustness Rules:
+- Interpret "get", "gate", "kit", "bit" as "git".
+- Ignore polite fillers like "please", "could you", "would you".
+- "get push" -> git_push
+- "gate status" -> git_status
 
 Output JSON format:
 {
@@ -98,6 +105,10 @@ class Brain:
                 )
                 content = completion.choices[0].message.content
                 data = json.loads(content)
+                if isinstance(data, list):
+                    if not data:
+                        return ToolCall(tool=GitTool.HELP, explanation="Empty response from LLM.")
+                    data = data[0]
                 return ToolCall(**data)
             
             elif self.provider == "gemini" and self.gemini_model:

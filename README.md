@@ -15,6 +15,8 @@
 - 🗣️ **Voice-Activated**: Just say "Hey Git" (coming soon) or trigger the listener to start.
 - 🧠 **Natural Language Understanding**: Don't memorize flags. Just say "undo the last commit" or "push to main".
 - 🛡️ **Safety First**: Critical commands (like `push`, `reset`, `commit`) require your confirmation.
+- 🔄 **Robustness**: Automatic retries for flaky commands and network issues.
+- 📊 **Metrics**: Tracks usage stats for improvement.
 - 🔌 **Model Agnostic**: Bring your own keys! Supports **Groq**, **Gemini**, **Ollama**, and **Faster-Whisper**.
 - ⚡ **Fast & Efficient**: Optimized for low-latency interactions.
 
@@ -75,7 +77,9 @@ python -m app.main
 **Try saying:**
 - *"Check the status"*
 - *"Stage all changes"*
-- *"Commit these changes with a message about updating the readme"*
+- *"Smart commit"* (Stages, generates message, confirms, commits, and pushes)
+- *"Run tests"*
+- *"Pull from origin"*
 - *"Push to origin main"*
 
 ## 📂 Project Structure

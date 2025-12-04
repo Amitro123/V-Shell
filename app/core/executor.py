@@ -1,17 +1,23 @@
 import logging
 import git
+import asyncio
 from typing import Any, Dict, Optional
 import subprocess
+from rich.console import Console
 from app.core.models import ToolCall, GitTool, CommandResult, AppConfig
+from app.core.voice_flow import get_voice_confirmation
 
 logger = logging.getLogger(__name__)
 
 class GitExecutor:
     """Executes Git commands safely."""
     
-    def __init__(self, config: AppConfig, brain=None):
+    def __init__(self, config: AppConfig, brain=None, recorder=None, transcriber=None, console=None):
         self.config = config
         self.brain = brain
+        self.recorder = recorder
+        self.transcriber = transcriber
+        self.console = console or Console()
         try:
             self.repo = git.Repo(search_parent_directories=True)
             logger.info(f"Initialized GitExecutor in repo: {self.repo.working_dir}")
@@ -22,7 +28,7 @@ class GitExecutor:
             logger.error(f"Failed to initialize Git repo: {e}")
             self.repo = None
 
-    def execute(self, tool_call: ToolCall) -> CommandResult:
+    async def execute(self, tool_call: ToolCall) -> CommandResult:
         """Executes the requested tool."""
         if not self.repo:
             return CommandResult(success=False, stderr="Current directory is not a git repository.")
@@ -56,7 +62,7 @@ class GitExecutor:
             elif tool == GitTool.PULL:
                 return self._git_pull(**params)
             elif tool == GitTool.SMART_COMMIT_PUSH:
-                return self._smart_commit_push()
+                return await self._smart_commit_push()
             elif tool == GitTool.HELP:
                 return CommandResult(success=True, stdout="I can help you with git commands. Try 'git status' or 'commit changes'.")
             else:
@@ -142,39 +148,45 @@ class GitExecutor:
         output = self.repo.git.pull(remote, branch)
         return CommandResult(success=True, stdout=output)
 
-    def _smart_commit_push(self) -> CommandResult:
-        """Stages all changes, generates a commit message, commits, and pushes."""
+    async def _smart_commit_push(self) -> CommandResult:
+        """Stages all changes, generates a commit message, commits, and pushes (Conversational)."""
         if not self.brain:
             return CommandResult(success=False, stderr="Brain not initialized for smart commit.")
+        
+        if not (self.recorder and self.transcriber):
+             return CommandResult(success=False, stderr="Audio components not initialized for voice flow.")
             
         try:
-            # 1. Stage all changes
+            # 1. Status & Stage Confirmation
+            status = self.repo.git.status("-sb")
+            self.console.print(f"[dim]{status}[/dim]")
+            
+            if not await get_voice_confirmation("I see changes. Do you want me to stage all of them?", self.recorder, self.transcriber, self.console):
+                return CommandResult(success=False, stderr="Cancelled by user at staging.")
+
             self.repo.git.add(".")
             
-            # 2. Get diff for message generation
+            # 2. Get diff & Generate Message
             diff = self.repo.git.diff("--staged")
             if not diff:
                 return CommandResult(success=False, stderr="No changes to commit.")
                 
-            # 3. Generate commit message
             message = self.brain.generate_commit_message(diff)
             
-            # 4. Interactive Confirmation
-            print(f"\nGenerated commit message: '{message}'")
-            confirm = input("Use this message? (yes/no/edit): ").strip().lower()
+            # 3. Message Confirmation
+            self.console.print(f"\n[bold]Proposed commit message:[/bold] '{message}'")
+            if not await get_voice_confirmation("Do you approve this commit message?", self.recorder, self.transcriber, self.console):
+                 return CommandResult(success=False, stderr="Cancelled by user at commit message.")
             
-            if confirm in ("no", "n"):
-                return CommandResult(success=False, stderr="Smart commit cancelled by user.")
-            elif confirm in ("edit", "e"):
-                message = input("Enter commit message: ").strip()
-                if not message:
-                    return CommandResult(success=False, stderr="Empty commit message. Cancelled.")
-            
-            # 5. Commit
+            # 4. Commit
             self.repo.git.commit("-m", message)
+            self.console.print("[green]Commit created.[/green]")
+            
+            # 5. Push Confirmation
+            if not await get_voice_confirmation("Should I push to origin now?", self.recorder, self.transcriber, self.console):
+                return CommandResult(success=True, stdout=f"Committed '{message}' but did NOT push.")
             
             # 6. Push
-            # Use current branch
             branch = self.repo.active_branch.name
             output = self.repo.git.push("origin", branch)
             
