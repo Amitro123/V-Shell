@@ -86,7 +86,8 @@ class Transcriber:
             elif self.provider == "faster-whisper" and self.whisper_model:
                 if isinstance(audio_input, str):
                     # faster-whisper accepts file path directly
-                    segments, info = self.whisper_model.transcribe(audio_input, beam_size=5)
+                    # Enforce English to avoid hallucinations
+                    segments, info = self.whisper_model.transcribe(audio_input, beam_size=5, language="en")
                     # Convert segments generator to list for logging
                     segments_list = list(segments)
                     logger.info(f"Raw whisper segments: {segments_list}")
@@ -97,7 +98,8 @@ class Transcriber:
                 elif isinstance(audio_input, bytes):
                     # faster-whisper expects float32 numpy array
                     audio_array = np.frombuffer(audio_input, dtype=np.int16).astype(np.float32) / 32768.0
-                    segments, info = self.whisper_model.transcribe(audio_array, beam_size=5)
+                    # Enforce English to avoid hallucinations
+                    segments, info = self.whisper_model.transcribe(audio_array, beam_size=5, language="en")
                     # Convert segments generator to list for logging
                     segments_list = list(segments)
                     logger.info(f"Raw whisper segments: {segments_list}")

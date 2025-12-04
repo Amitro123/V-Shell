@@ -48,3 +48,6 @@ htmlcov/
 *.wav
 *.mp3
 *.flac
+
+# Metrics
+metrics.jsonl
