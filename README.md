@@ -1,90 +1,100 @@
-# v-shell
+# 🎙️ v-shell (GitVoice)
 
-Voice-controlled shell assistant
+> **Hands-free Git operations powered by AI.**
 
-## Project Structure
+![Python](https://img.shields.io/badge/Python-3.x-blue?style=for-the-badge&logo=python&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-In%20Development-orange?style=for-the-badge)
 
-```
-v-shell/
-├── app/
-│   ├── __init__.py
-│   ├── main.py              # Main application entry point
-│   ├── config.py            # Application configuration
-│   ├── audio/               # Audio processing
-│   │   ├── __init__.py
-│   │   ├── recorder.py      # Audio recording functionality
-│   │   └── stt.py           # Speech-to-text
-│   ├── llm/                 # LLM integration
-│   │   ├── __init__.py
-│   │   ├── router.py        # LLM routing logic
-│   │   └── commit_message.py # Commit message generation
-│   ├── core/                # Core functionality
-│   │   ├── __init__.py
-│   │   ├── models.py        # Data models
-│   │   └── executor.py      # Command execution
-│   └── cli/                 # CLI interface
-│       ├── __init__.py
-│       └── ui.py            # User interface
-├── tests/                   # Test suite
-│   ├── __init__.py
-│   ├── test_executor.py
-│   └── test_router.py
-├── .env.example             # Environment variables template
-├── .gitignore
-├── pyproject.toml           # Project configuration
-└── README.md
-```
+**v-shell** (internally GitVoice) is your intelligent voice-controlled assistant for Git. Stop typing repetitive commands and start talking to your repository. Powered by state-of-the-art LLMs and Speech-to-Text technology, it understands your intent and executes Git operations safely and efficiently.
 
-## Installation
+---
+
+## ✨ Key Features
+
+- 🗣️ **Voice-Activated**: Just say "Hey Git" (coming soon) or trigger the listener to start.
+- 🧠 **Natural Language Understanding**: Don't memorize flags. Just say "undo the last commit" or "push to main".
+- 🛡️ **Safety First**: Critical commands (like `push`, `reset`, `commit`) require your confirmation.
+- 🔌 **Model Agnostic**: Bring your own keys! Supports **Groq**, **Gemini**, **Ollama**, and **Faster-Whisper**.
+- ⚡ **Fast & Efficient**: Optimized for low-latency interactions.
+
+## 🛠️ Tech Stack
+
+- **Core**: Python 3.x, Pydantic, GitPython
+- **AI/ML**: Faster-Whisper, Groq API, Google Gemini, Ollama
+- **CLI**: Rich terminal interface (planned)
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Python 3.8+
+- A microphone
+- API Keys for Groq or Gemini (optional but recommended for best performance)
+
+### Installation
 
 ```bash
-# Create virtual environment
+# Clone the repository
+git clone https://github.com/Amitro123/V-Shell.git
+cd V-Shell
+
+# Create a virtual environment
 python -m venv venv
 
-# Activate virtual environment
-# On Windows:
+# Activate it
+# Windows:
 venv\Scripts\activate
-# On Unix or MacOS:
+# Mac/Linux:
 source venv/bin/activate
 
 # Install dependencies
 pip install -e .
-
-# Install development dependencies
-pip install -e ".[dev]"
 ```
 
-## Configuration
+### Configuration
 
-1. Copy `.env.example` to `.env`
-2. Fill in your API keys and configuration values
+1. Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
+2. Edit `.env` and add your API keys:
+   ```ini
+   GROQ_API_KEY=your_key_here
+   GEMINI_API_KEY=your_key_here
+   ```
 
-## Usage
+## 🎤 Usage
+
+Start the assistant:
 
 ```bash
-# Run the application
 python -m app.main
 ```
 
-## Development
+**Try saying:**
+- *"Check the status"*
+- *"Stage all changes"*
+- *"Commit these changes with a message about updating the readme"*
+- *"Push to origin main"*
 
-```bash
-# Run tests
-pytest
+## 📂 Project Structure
 
-# Run tests with coverage
-pytest --cov=app
-
-# Format code
-black .
-
-# Lint code
-flake8 .
-
-# Type checking
-mypy app/
+```
+v-shell/
+├── app/
+│   ├── audio/      # 🎧 Audio recording & STT
+│   ├── core/       # ⚙️ Core logic & execution
+│   ├── llm/        # 🧠 LLM routing & intelligence
+│   └── cli/        # 🖥️ User Interface
+├── tests/          # 🧪 Test suite
+└── ...
 ```
 
-## License
+## 🤝 Contributing
 
-TBD
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+
+This project is licensed under the MIT License.
