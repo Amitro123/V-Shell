@@ -1,0 +1,50 @@
+[project]
+name = "gitvoice"
+version = "0.1.0"
+description = "Voice-controlled Git assistant for hands-free development"
+authors = [{name = "Your Name", email = "your.email@example.com"}]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "rich>=13.0.0",
+    "gitpython>=3.1.0",
+    "sounddevice>=0.4.6",
+    "numpy>=1.24.0",
+    "openwakeword>=0.5.0",
+    "faster-whisper>=0.10.0",
+    "groq>=0.4.0",
+    "litellm>=1.0.0",
+    "google-generativeai>=0.3.0",
+    "soundfile>=0.12.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+]
+tts = [
+    "pyttsx3>=2.90",
+]
+hotkey = [
+    "keyboard>=0.13.5",
+]
+
+[project.scripts]
+gitvoice = "app.main:main"
+
+[build-system]
+requires = ["setuptools>=68.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
