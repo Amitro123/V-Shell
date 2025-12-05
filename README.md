@@ -20,6 +20,29 @@
 - 🔌 **Model Agnostic**: Bring your own keys! Supports **Groq**, **Gemini**, **Ollama**, and **Faster-Whisper**.
 - ⚡ **Fast & Efficient**: Optimized for low-latency interactions.
 
+## 🏗️ Architecture
+
+```mermaid
+flowchart TD
+    User([User]) -->|Voice Command| Audio[Audio Input]
+    Audio -->|WAV| STT[STT Engine\n(Faster-Whisper)]
+    STT -->|Text| Router[LLM Router\n(Brain)]
+    Router -->|ToolCall| Policy{Tool Policy\n(Safety Gate)}
+    
+    Policy -->|Safe/Confirmed| Executor[Git Executor]
+    Policy -->|Unsafe/No Confirm| Cancel([Cancel])
+    
+    Executor -->|Execute| Git[(Git Repository)]
+    Git -->|Result| Executor
+    Executor -->|Feedback| User
+    
+    subgraph Core Logic
+    Router
+    Policy
+    Executor
+    end
+```
+
 ## 🛠️ Tech Stack
 
 - **Core**: Python 3.x, Pydantic, GitPython

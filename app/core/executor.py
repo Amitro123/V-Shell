@@ -5,18 +5,15 @@ from typing import Any, Dict, Optional
 import subprocess
 from rich.console import Console
 from app.core.models import ToolCall, GitTool, CommandResult, AppConfig
-from app.core.voice_flow import get_voice_confirmation
 
 logger = logging.getLogger(__name__)
 
 class GitExecutor:
     """Executes Git commands safely."""
     
-    def __init__(self, config: AppConfig, brain=None, recorder=None, transcriber=None, console=None):
+    def __init__(self, config: AppConfig, brain=None, console=None):
         self.config = config
         self.brain = brain
-        self.recorder = recorder
-        self.transcriber = transcriber
         self.console = console or Console()
         try:
             self.repo = git.Repo(search_parent_directories=True)
@@ -62,6 +59,9 @@ class GitExecutor:
             elif tool == GitTool.PULL:
                 return self._git_pull(**params)
             elif tool == GitTool.SMART_COMMIT_PUSH:
+                # _smart_commit_push is synchronous logic mostly but we can keep it async for consistency
+                # Actually, gitpython is blocking, so wrapping in async doesn't magically make it non-blocking
+                # unless we run in executor. For now, direct call is fine as main loop awaits it.
                 return await self._smart_commit_push()
             elif tool == GitTool.HELP:
                 return CommandResult(success=True, stdout="I can help you with git commands. Try 'git status' or 'commit changes'.")
@@ -149,44 +149,30 @@ class GitExecutor:
         return CommandResult(success=True, stdout=output)
 
     async def _smart_commit_push(self) -> CommandResult:
-        """Stages all changes, generates a commit message, commits, and pushes (Conversational)."""
+        """Stages all changes, generates a commit message, commits, and pushes (Single Step)."""
         if not self.brain:
             return CommandResult(success=False, stderr="Brain not initialized for smart commit.")
-        
-        if not (self.recorder and self.transcriber):
-             return CommandResult(success=False, stderr="Audio components not initialized for voice flow.")
             
         try:
-            # 1. Status & Stage Confirmation
+            # 1. Status
             status = self.repo.git.status("-sb")
-            self.console.print(f"[dim]{status}[/dim]")
+            self.console.print(f"[dim]Status:\n{status}[/dim]")
             
-            if not await get_voice_confirmation("I see changes. Do you want me to stage all of them?", self.recorder, self.transcriber, self.console):
-                return CommandResult(success=False, stderr="Cancelled by user at staging.")
-
+            # 2. Add all
             self.repo.git.add(".")
             
-            # 2. Get diff & Generate Message
+            # 3. Get diff & Generate Message
             diff = self.repo.git.diff("--staged")
             if not diff:
                 return CommandResult(success=False, stderr="No changes to commit.")
                 
             message = self.brain.generate_commit_message(diff)
-            
-            # 3. Message Confirmation
-            self.console.print(f"\n[bold]Proposed commit message:[/bold] '{message}'")
-            if not await get_voice_confirmation("Do you approve this commit message?", self.recorder, self.transcriber, self.console):
-                 return CommandResult(success=False, stderr="Cancelled by user at commit message.")
+            self.console.print(f"[bold]Commit message:[/bold] '{message}'")
             
             # 4. Commit
             self.repo.git.commit("-m", message)
-            self.console.print("[green]Commit created.[/green]")
             
-            # 5. Push Confirmation
-            if not await get_voice_confirmation("Should I push to origin now?", self.recorder, self.transcriber, self.console):
-                return CommandResult(success=True, stdout=f"Committed '{message}' but did NOT push.")
-            
-            # 6. Push
+            # 5. Push
             branch = self.repo.active_branch.name
             output = self.repo.git.push("origin", branch)
             

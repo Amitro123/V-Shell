@@ -13,7 +13,6 @@ from app.core.executor import GitExecutor
 from app.core.models import GitTool
 from app.core.metrics import MetricsLogger
 from app.core.policies import TOOL_POLICIES, ToolPolicy
-from app.core.voice_flow import get_voice_confirmation
 
 # Configure logging
 logging.basicConfig(
@@ -43,7 +42,7 @@ async def main():
             recorder = AudioRecorder(config)
             transcriber = Transcriber(config)
             brain = Brain(config)
-            executor = GitExecutor(config, brain, recorder, transcriber, console)
+            executor = GitExecutor(config, brain, console=console)
             metrics_logger = MetricsLogger()
         except Exception as e:
             console.print(f"[bold red]Initialization failed:[/bold red] {e}")
@@ -57,13 +56,8 @@ async def main():
         # 1. Human Confirmation
         if policy.confirmation_required and config.require_confirmation_writes:
             console.print(f"[bold yellow]Safety Check:[/bold yellow] About to execute: {tool_call.tool.value} ({tool_call.params})")
-            
-            # Use voice confirmation
-            prompt = f"About to execute {tool_call.tool.value}. Are you sure?"
-            is_confirmed = await get_voice_confirmation(prompt, recorder, transcriber, console)
-            
-            if not is_confirmed:
-                console.print("[red]Cancelled by user (voice).[/red]")
+            if not Confirm.ask(f"[bold red]Are you sure?[/bold red]"):
+                console.print("[red]Cancelled by user.[/red]")
                 metrics_logger.log(raw_text, tool_call.tool.value, success=False, error="cancelled_by_user")
                 return
 
