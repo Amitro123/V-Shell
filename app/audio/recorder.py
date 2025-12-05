@@ -6,6 +6,7 @@ from pathlib import Path
 import sounddevice as sd
 import soundfile as sf
 from app.core.models import AppConfig
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -21,26 +22,46 @@ class AudioRecorder:
         # Create temp directory for audio files
         self.tmp_dir = Path(".tmp_audio")
         self.tmp_dir.mkdir(exist_ok=True)
-
-    def record_once(self, duration: int = None) -> str:
-        """
-        Records audio for a specified duration.
-        Saves to a WAV file and returns the path.
-        """
-        if duration is None:
-            duration = self.audio_config.duration
-            
-        logger.info(f"Recording command for {duration} seconds...")
         
-        recording = sd.rec(
-            int(duration * self.sample_rate),
+        self._stream = None
+        self._frames = []
+
+    def start_recording(self):
+        """Starts recording audio in the background."""
+        if self._stream:
+            self.stop_recording()
+            
+        self._frames = []
+        
+        def callback(indata, frames, time, status):
+            if status:
+                logger.warning(status)
+            self._frames.append(indata.copy())
+
+        self._stream = sd.InputStream(
             samplerate=self.sample_rate,
             channels=self.channels,
-            dtype='float32', # soundfile expects float32 usually
-            blocking=True
+            callback=callback
         )
+        self._stream.start()
+        logger.info("Recording started...")
+
+    def stop_recording(self) -> str:
+        """Stops recording and saves to file."""
+        if not self._stream:
+            return ""
+            
+        self._stream.stop()
+        self._stream.close()
+        self._stream = None
+        logger.info("Recording stopped.")
         
-        logger.info("Recording complete.")
+        if not self._frames:
+            logger.warning("No audio recorded.")
+            return ""
+
+        # Concatenate all blocks
+        recording = np.concatenate(self._frames, axis=0)
         
         # Save to file
         filename = f"cmd_{uuid.uuid4()}.wav"

@@ -62,7 +62,7 @@ class GitExecutor:
                 # _smart_commit_push is synchronous logic mostly but we can keep it async for consistency
                 # Actually, gitpython is blocking, so wrapping in async doesn't magically make it non-blocking
                 # unless we run in executor. For now, direct call is fine as main loop awaits it.
-                return await self._smart_commit_push()
+                return await self._smart_commit_push(**params)
             elif tool == GitTool.HELP:
                 return CommandResult(success=True, stdout="I can help you with git commands. Try 'git status' or 'commit changes'.")
             else:
@@ -148,7 +148,7 @@ class GitExecutor:
         output = self.repo.git.pull(remote, branch)
         return CommandResult(success=True, stdout=output)
 
-    async def _smart_commit_push(self) -> CommandResult:
+    async def _smart_commit_push(self, confirm_callback: Optional[Any] = None) -> CommandResult:
         """Stages all changes, generates a commit message, commits, and pushes (Single Step)."""
         if not self.brain:
             return CommandResult(success=False, stderr="Brain not initialized for smart commit.")
@@ -156,7 +156,6 @@ class GitExecutor:
         try:
             # 1. Status
             status = self.repo.git.status("-sb")
-            self.console.print(f"[dim]Status:\n{status}[/dim]")
             
             # 2. Add all
             self.repo.git.add(".")
@@ -167,7 +166,14 @@ class GitExecutor:
                 return CommandResult(success=False, stderr="No changes to commit.")
                 
             message = self.brain.generate_commit_message(diff)
-            self.console.print(f"[bold]Commit message:[/bold] '{message}'")
+            # Log intention, but rely on return value for display in MCP
+            if self.console:
+                 self.console.print(f"[bold]Commit message:[/bold] '{message}'")
+            
+            # Confirmation Step
+            if confirm_callback:
+                if not confirm_callback(f"Commit with message '{message}'?"):
+                    return CommandResult(success=False, stderr="Smart commit cancelled by user.")
             
             # 4. Commit
             self.repo.git.commit("-m", message)

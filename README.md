@@ -12,7 +12,7 @@
 
 ## ✨ Key Features
 
-- 🗣️ **Voice-Activated**: Just say "Hey Git" (coming soon) or trigger the listener to start.
+- 🗣️ **Voice-Activated**: Manual "Press Enter to Start/Stop" flow for precise command capture.
 - 🧠 **Hybrid Intelligence**: Uses local **SetFit** models for instant reactions to common commands, falling back to LLMs for complex intent.
 - 🛡️ **Simplified Safety**: Dangerous commands (`push`, `smart_commit`) ask for a simple keyboard "Yes/No". No complex voice confirmations.
 - ⚡ **Smart Commit**: Single command: "status -> stage -> generate message -> commit -> push".
@@ -95,9 +95,14 @@ pip install -e .
 
 Start the assistant:
 
-```bash
 python -m app.main
 ```
+
+Follow the on-screen prompts:
+1. Press **Enter** to START recording.
+2. Speak your command (e.g., *"Commit these changes with message 'fix login bug'"*).
+3. Press **Enter** to STOP recording.
+
 
 **Try saying:**
 - *"Check the status"*
@@ -127,3 +132,25 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## 📄 License
 
 This project is licensed under the MIT License.
+
+## 🔌 MCP Server
+
+GitVoice includes an MCP server that you can connect to IDEs like **Claude Desktop**, **Cursor**, or **Windsurf**. This allows the AI assistant to directly control your git repository.
+
+**Configuration for Claude Desktop:**
+
+```json
+{
+  "mcpServers": {
+    "gitvoice": {
+      "command": "python",
+      "args": [
+        "-m",
+        "app.mcp.server"
+      ]
+    }
+  }
+}
+```
+
+Available tools: `git_status`, `run_tests`, `git_diff`, `smart_commit_push`, `git_pull`.

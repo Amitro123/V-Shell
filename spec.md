@@ -12,7 +12,8 @@ v-shell (internally referred to as GitVoice) is a voice-controlled shell assista
 ## Core Features
 
 ### Voice & Intent
-- **Wake Word Detection**: (Planned/In-progress) Activation via "hey git".
+- **Manual Trigger**: "Press Enter to Start/Stop" flow for reliable audio capture.
+- **Wake Word Detection**: (Future Scope) Currently disabled in favor of manual control.
 - **Speech-to-Text**: Transcription of voice commands using providers like Faster-Whisper or Groq.
 - **Hybrid Intent Classification**:
     - **Local (SetFit)**: Fast, offline classification for common commands (`status`, `test`, `push`).
@@ -40,6 +41,16 @@ Supported commands include:
 - **Configurable Providers**: Switch between different LLM and STT backends via `config.py` / `.env`.
 - **Metrics**: Usage logging to `metrics.jsonl` for debugging and analysis.
 
+### MCP Server (Model Context Protocol)
+- **FastMCP Server**: Exposes Git tools to external clients (IDEs, Agents).
+- **Tools Exposed**:
+    - `git_status`: Returns status and exit code.
+    - `run_tests`: Runs configured tests.
+    - `git_diff`: Returns diff for path.
+    - `smart_commit_push`: Auto-stage, commit, push (client handles confirmation).
+    - `git_pull`: Pulls changes.
+- **Entry Point**: `app/mcp/server.py`
+
 ## Architecture
 
 1.  **Audio Input**: Captures user voice.
@@ -60,6 +71,8 @@ Supported commands include:
     - `faster-whisper` / `groq`: Speech-to-Text.
     - `setfit` / `sentence-transformers`: Local intent classification.
     - `groq` / `google-generativeai` / `ollama`: LLM inference.
+- **Integration**:
+    - `mcp`: Model Context Protocol for IDE integration.
 - **Testing**: `pytest`
 
 ## Project Structure

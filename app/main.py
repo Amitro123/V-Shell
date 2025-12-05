@@ -107,14 +107,24 @@ async def main():
 
     try:
         while True:
-            console.print("\n[bold blue]Press Enter to record a new voice command (or 'q' to quit)...[/bold blue]")
+            console.print("\n[bold blue]Press Enter to START recording (or 'q' to quit)...[/bold blue]")
             cmd = input().strip().lower()
             if cmd == 'q':
                 break
             
-            # 1. Record
-            audio_path = recorder.record_once()
-            console.print(f"[dim]Recorded audio: {audio_path}[/dim]")
+            # 1. Start Recording
+            recorder.start_recording()
+            
+            # 2. Stop Recording
+            console.print("[bold red]Recording... Press Enter to STOP.[/bold red]")
+            input()
+            audio_path = recorder.stop_recording()
+            
+            if not audio_path:
+                console.print("[red]No audio captured.[/red]")
+                continue
+
+            console.print(f"[dim]Saved audio: {audio_path}[/dim]")
             
             # 2. Transcribe
             with console.status("[dim]Transcribing...[/dim]"):
@@ -137,6 +147,10 @@ async def main():
                 continue
             
             # 4. Execute with Policy
+            # Inject confirmation callback for smart commit (safe since in-process)
+            if tool_call.tool == GitTool.SMART_COMMIT_PUSH:
+                tool_call.params["confirm_callback"] = lambda msg: Confirm.ask(f"[bold yellow]{msg}[/bold yellow]")
+                
             await run_tool_with_policy(tool_call, stt_result.text)
                     
     except KeyboardInterrupt:
