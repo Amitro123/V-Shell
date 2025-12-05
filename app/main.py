@@ -63,12 +63,12 @@ async def main():
         attempts = policy.retries + 1
         for i in range(attempts):
             try:
-                with console.status(f"[dim]Executing {tool_call.tool} (attempt {i+1}/{attempts})...[/dim]"):
-                    start_time = asyncio.get_event_loop().time()
-                    # Call stateless executor
-                    result_dict = await execute_tool(tool_call, config=config, brain=brain, console=console)
-                    end_time = asyncio.get_event_loop().time()
-                    duration = (end_time - start_time) * 1000
+                console.print(f"[dim]Executing {tool_call.tool} (attempt {i+1}/{attempts})...[/dim]")
+                start_time = asyncio.get_event_loop().time()
+                # Call stateless executor
+                result_dict = await execute_tool(tool_call, config=config, brain=brain, console=console)
+                end_time = asyncio.get_event_loop().time()
+                duration = (end_time - start_time) * 1000
 
                 is_success = result_dict.get("success", False) # execute_tool now returns dict
                 exit_code = result_dict.get("exit_code", 0)
