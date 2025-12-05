@@ -59,7 +59,7 @@ Supported commands include:
     - **Fast Path**: SetFit classifier checks for common intents locally.
     - **Slow Path**: LLM Router analyzes complex text if SetFit confidence is low.
 4.  **Tool Policy**: Checks safety requirements and retry configuration.
-5.  **Git Executor**: Safely executes the determined Git command using `GitPython`.
+5.  **Tool Dispatcher (`execute_tool`)**: Routes `ToolCall` to modular tool implementations in `app/core/tools/`.
 6.  **Feedback**: Returns success/failure status and output to the user (via CLI/TTS).
 
 ```mermaid
@@ -73,20 +73,30 @@ flowchart TD
     Intent -- Low Conf --> Router["LLM Router\n(Brain)"]
     Router -->|ToolCall| Policy{"Tool Policy\n(Safety Gate)"}
     
-    Policy -->|Safe/Confirmed| Executor[Git Executor]
+    Policy -->|Safe/Confirmed| Dispatcher["execute_tool\n(Dispatcher)"]
     Policy -->|Unsafe/No Confirm| Cancel([Cancel])
     
-    MCP -->|Direct Call| Executor
+    MCP -->|Direct Call| Dispatcher
     
-    Executor -->|Execute| Git[(Git Repository)]
-    Git -->|Result| Executor
-    Executor -->|CLI Output| User
+    Dispatcher -->|git.status| GitTools[app/core/tools/git/]
+    Dispatcher -->|docker.*| DockerTools[app/core/tools/docker/]
+    Dispatcher -->|system.*| SystemTools[app/core/tools/system/]
+    
+    GitTools -->|Execute| Git[(Git Repository)]
+    Git -->|Result| Dispatcher
+    Dispatcher -->|CLI Output| User
     
     subgraph Core Logic
     Router
     Policy
-    Executor
+    Dispatcher
     MCP
+    end
+    
+    subgraph Tools
+    GitTools
+    DockerTools
+    SystemTools
     end
 ```
 
@@ -105,8 +115,15 @@ flowchart TD
 
 ## Project Structure
 - `app/`: Main application source code.
-    - `core/`: Core logic (models, executor).
+    - `core/`: Core logic.
+        - `executor.py`: `execute_tool` dispatcher function.
+        - `models.py`: Pydantic models (`ToolCall`, `AppConfig`).
+        - `tools/`: Modular tool implementations.
+            - `git/`: `status.py`, `diff.py`, `pull.py`, `commit_push.py`, `test_runner.py`
+            - `docker/`: Placeholder (`containers.py`)
+            - `system/`: Placeholder (`shell.py`)
     - `audio/`: Audio recording and processing.
     - `llm/`: LLM integration and routing.
-    - `cli/`: User interface.
+    - `intent/`: SetFit intent classifier.
+    - `mcp/`: FastMCP server (`server.py`).
 - `tests/`: Test suite.

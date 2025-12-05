@@ -11,36 +11,36 @@ You are a Git assistant. Your job is to map natural language commands to specifi
 You must return a SINGLE JSON object matching the ToolCall schema. Do not return a list.
 
 Available tools:
-- git_status: Check status
-- git_log: Show commit history (params: n [default 5])
-- git_diff: Show changes (params: file [optional])
-- git_add_all: Stage all changes
-- git_commit: Commit changes (params: message [required])
-- git_push: Push to remote (params: remote [default origin], branch [optional])
-- git_pull: Pull from remote (params: remote [default origin], branch [optional])
-- git_reset: Reset changes (params: mode [soft, mixed, hard], commits [default 1])
-- git_checkout_branch: Switch branch (params: branch [required])
-- git_create_branch: Create and switch to branch (params: branch [required])
-- run_tests: Run the project's test suite
-- smart_commit_push: Automatically stage, commit (with generated message), and push
+- git.status: Check status
+- git.log: Show commit history (params: n [default 5])
+- git.diff: Show changes (params: path [optional])
+- git.add_all: Stage all changes
+- git.commit: Commit changes (params: message [required])
+- git.push: Push to remote (params: remote [default origin], branch [optional])
+- git.pull: Pull from remote (params: remote [default origin], branch [optional])
+- git.reset: Reset changes (params: mode [soft, mixed, hard], commits [default 1])
+- git.checkout_branch: Switch branch (params: branch [required])
+- git.create_branch: Create and switch to branch (params: branch [required])
+- git.run_tests: Run the project's test suite
+- git.smart_commit_push: Automatically stage, commit (with generated message), and push
 - help: If the intent is unclear or not git related
 
 Rules:
 - For "commit", if no message is provided, generate a concise one based on context or use "Update".
-- For "undo", usually means git_reset (soft by default).
-- For "show me changes", use git_diff.
-- For "what did I do", use git_status or git_log.
-- For "run tests" or "test my code", use run_tests.
-- For "smart commit" or "commit and push", use smart_commit_push.
-- For "pull" or "update code", use git_pull.
+- For "undo", usually means git.reset (soft by default).
+- For "show me changes", use git.diff.
+- For "what did I do", use git.status or git.log.
+- For "run tests" or "test my code", use git.run_tests.
+- For "smart commit" or "commit and push", use git.smart_commit_push.
+- For "pull" or "update code", use git.pull.
 - If the user asks to "fix conflicts", use 'help' for now as it's not fully implemented.
-- For compound commands like "status and commit", "add and push", or "do everything", use smart_commit_push.
+- For compound commands like "status and commit", "add and push", or "do everything", use git.smart_commit_push.
 
 Robustness Rules:
 - Interpret "get", "gate", "kit", "bit" as "git".
 - Ignore polite fillers like "please", "could you", "would you".
-- "get push" -> git_push
-- "gate status" -> git_status
+- "get push" -> git.push
+- "gate status" -> git.status
 
 Output JSON format:
 {
@@ -100,7 +100,7 @@ class Brain:
             logger.info(f"SetFit prediction: {label} ({confidence:.2f})")
             
             if confidence >= 0.6 and label != "help":
-                confirm = label in ["smart_commit_push", "git_pull", "git_push", "git_commit", "git_reset"]
+                confirm = label in ["git.smart_commit_push", "git.pull", "git.push", "git.commit", "git.reset"]
                 return ToolCall(tool=label, params={}, confirmation_required=confirm)
         except Exception as e:
             logger.warning(f"SetFit classification failed (falling back to LLM): {e}")
@@ -145,7 +145,7 @@ class Brain:
             # Heuristic Safety Override
             dangerous_keywords = ["commit", "push", "pull", "reset", "discard"]
             if any(k in text.lower() for k in dangerous_keywords) or \
-               tool_call.tool in [GitTool.SMART_COMMIT_PUSH, GitTool.PUSH, GitTool.PULL, GitTool.RESET, GitTool.COMMIT]:
+               tool_call.tool in ["git.smart_commit_push", "git.push", "git.pull", "git.reset", "git.commit"]:
                 tool_call.confirmation_required = True
                 
             return tool_call

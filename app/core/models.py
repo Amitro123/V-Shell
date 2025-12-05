@@ -6,23 +6,24 @@ from pydantic import BaseModel, Field
 class GitTool(str, Enum):
     """Available Git tools."""
     
-    STATUS = "git_status"
-    LOG = "git_log"
-    DIFF = "git_diff"
-    ADD_ALL = "git_add_all"
-    COMMIT = "git_commit"
-    PUSH = "git_push"
-    RESET = "git_reset"
-    CHECKOUT_BRANCH = "git_checkout_branch"
-    CREATE_BRANCH = "git_create_branch"
-    RUN_TESTS = "run_tests"
-    SMART_COMMIT_PUSH = "smart_commit_push"
-    PULL = "git_pull"
+    STATUS = "git.status"
+    LOG = "git.log" # Not implemented as tool yet, keeping for now
+    DIFF = "git.diff"
+    ADD_ALL = "git.add_all" # Not implemented as standalone tool yet (part of smart commit)
+    COMMIT = "git.commit" # Not implemented as standalone tool yet
+    PUSH = "git.push" # Not implemented as standalone tool yet
+    RESET = "git.reset" # Not implemented as standalone yet
+    CHECKOUT_BRANCH = "git.checkout_branch" # Not implemented as standalone yet
+    CREATE_BRANCH = "git.create_branch" # Not implemented as standalone yet
+    RUN_TESTS = "git.run_tests"
+    SMART_COMMIT_PUSH = "git.smart_commit_push"
+    PULL = "git.pull"
     HELP = "help"
+
 class ToolCall(BaseModel):
     """Parsed intent as a structured tool call."""
     
-    tool: GitTool
+    tool: str # Changed from GitTool to str to allow extensibility
     params: dict[str, Any] = Field(default_factory=dict)
     confirmation_required: bool = False
     explanation: Optional[str] = None  # Human-readable explanation of what will happen

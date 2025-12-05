@@ -23,7 +23,7 @@ def brain():
 @pytest.mark.asyncio
 async def test_process_empty_text(brain):
     result = await brain.process("")
-    assert result.tool == GitTool.HELP
+    assert result.tool == "help" # GitTool.HELP value
     assert "didn't hear anything" in result.explanation
 
 @pytest.mark.asyncio
@@ -31,13 +31,13 @@ async def test_process_setfit_confidence_high(brain):
     # Mock SetFit classifier
     with patch("app.intent.setfit_router.SetFitIntentClassifier") as mock_cls:
         classifier_instance = Mock()
-        classifier_instance.predict_intent.return_value = ("git_status", 0.95)
+        classifier_instance.predict_intent.return_value = ("git.status", 0.95)
         # Mock lazy loading
         brain._classifier = classifier_instance
         
         result = await brain.process("status")
         
-        assert result.tool == GitTool.STATUS
+        assert result.tool == "git.status"
         assert result.confirmation_required is False
         classifier_instance.predict_intent.assert_called_with("status")
 
@@ -50,11 +50,11 @@ async def test_process_setfit_confidence_low_fallback(brain):
         brain._classifier = classifier_instance
         
         # Mock LLM fallback
-        brain._process_llm = AsyncMock(return_value=ToolCall(tool=GitTool.LOG, params={"n": 5}))
+        brain._process_llm = AsyncMock(return_value=ToolCall(tool="git.log", params={"n": 5}))
         
         result = await brain.process("show logs")
         
-        assert result.tool == GitTool.LOG
+        assert result.tool == "git.log"
         brain._process_llm.assert_called_with("show logs")
 
 @pytest.mark.asyncio
@@ -62,12 +62,12 @@ async def test_process_setfit_smart_commit_conf_required(brain):
     # Smart commit should require confirmation even if high confidence
     with patch("app.intent.setfit_router.SetFitIntentClassifier") as mock_cls:
         classifier_instance = Mock()
-        classifier_instance.predict_intent.return_value = ("smart_commit_push", 0.9)
+        classifier_instance.predict_intent.return_value = ("git.smart_commit_push", 0.9)
         brain._classifier = classifier_instance
         
         result = await brain.process("commit this")
         
-        assert result.tool == GitTool.SMART_COMMIT_PUSH
+        assert result.tool == "git.smart_commit_push"
         assert result.confirmation_required is True
 
 @patch("app.llm.router.with_retries")
@@ -77,7 +77,7 @@ async def test_process_llm_safety_override(mock_with_retries, brain):
     brain.provider = "groq"
     
     # Mock inner call to return a tool call WITHOUT confirmation initially
-    unsafe_call = ToolCall(tool=GitTool.PUSH, params={}, confirmation_required=False)
+    unsafe_call = ToolCall(tool="git.push", params={}, confirmation_required=False)
     
     # Mock with_retries to return our payload
     mock_with_retries.return_value = unsafe_call

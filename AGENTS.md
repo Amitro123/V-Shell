@@ -14,8 +14,11 @@ The primary AI agent responsible for interpreting and executing commands.
     - **Interpreter**: Hybrid system:
         - **Fast Path**: SetFit model for local, instant intent classification.
         - **Slow Path**: LLM (Groq/Gemini) for complex reasoning.
-    - **Executor**: Performs logical Git operations via `GitExecutor`.
-    - **MCP Server**: Exposes internal tools (`git_status`, `smart_commit`, etc.) to external agents and IDEs.
+    - **Tool Dispatcher (`execute_tool`)**: Routes `ToolCall` to modular implementations in `app/core/tools/`.
+        - **Git Tools**: `git.status`, `git.diff`, `git.pull`, `git.smart_commit_push`, `git.run_tests`
+        - **Docker Tools**: (Placeholder) `docker.*`
+        - **System Tools**: (Placeholder) `system.*`
+    - **MCP Server**: Exposes internal tools to external agents and IDEs.
     - **Reporter**: Reports results back to the User via CLI.
 
 ## System

@@ -10,38 +10,38 @@ MODEL_DIR = Path(".models/gitvoice-setfit")
 
 TRAIN_EXAMPLES = [
     # git_status
-    ("show git status", "git_status"),
-    ("what's my git status", "git_status"),
-    ("check the status", "git_status"),
-    ("please check status of the repo", "git_status"),
-    ("status please", "git_status"),
+    ("show git status", "git.status"),
+    ("what's my git status", "git.status"),
+    ("check the status", "git.status"),
+    ("please check status of the repo", "git.status"),
+    ("status please", "git.status"),
 
     # run_tests
-    ("run tests", "run_tests"),
-    ("run all the tests", "run_tests"),
-    ("execute pytest", "run_tests"),
-    ("run the unit tests again", "run_tests"),
-    ("test everything", "run_tests"),
+    ("run tests", "git.run_tests"),
+    ("run all the tests", "git.run_tests"),
+    ("execute pytest", "git.run_tests"),
+    ("run the unit tests again", "git.run_tests"),
+    ("test everything", "git.run_tests"),
 
     # smart_commit_push
-    ("commit and push my changes", "smart_commit_push"),
-    ("create a commit and push", "smart_commit_push"),
-    ("git commit then git push", "smart_commit_push"),
-    ("status then commit and push", "smart_commit_push"),
-    ("save everything and push", "smart_commit_push"),
-    ("write commit and push", "smart_commit_push"),
+    ("commit and push my changes", "git.smart_commit_push"),
+    ("create a commit and push", "git.smart_commit_push"),
+    ("git commit then git push", "git.smart_commit_push"),
+    ("status then commit and push", "git.smart_commit_push"),
+    ("save everything and push", "git.smart_commit_push"),
+    ("write commit and push", "git.smart_commit_push"),
 
     # git_diff
-    ("show me the diff", "git_diff"),
-    ("what changed since last commit", "git_diff"),
-    ("show git diff", "git_diff"),
-    ("what did i change", "git_diff"),
+    ("show me the diff", "git.diff"),
+    ("what changed since last commit", "git.diff"),
+    ("show git diff", "git.diff"),
+    ("what did i change", "git.diff"),
 
     # git_pull
-    ("pull latest changes", "git_pull"),
-    ("git pull", "git_pull"),
-    ("sync with origin main", "git_pull"),
-    ("update code", "git_pull"),
+    ("pull latest changes", "git.pull"),
+    ("git pull", "git.pull"),
+    ("sync with origin main", "git.pull"),
+    ("update code", "git.pull"),
 
     # help / fallback
     ("what can you do", "help"),

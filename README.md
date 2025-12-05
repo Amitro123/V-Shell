@@ -33,19 +33,20 @@ flowchart TD
     Intent -- Low Conf --> Router["LLM Router\n(Brain)"]
     Router -->|ToolCall| Policy{"Tool Policy\n(Safety Gate)"}
     
-    Policy -->|Safe/Confirmed| Executor[Git Executor]
+    Policy -->|Safe/Confirmed| Dispatcher["execute_tool\n(Dispatcher)"]
     Policy -->|Unsafe/No Confirm| Cancel([Cancel])
     
-    MCP -->|Direct Call| Executor
+    MCP -->|Direct Call| Dispatcher
     
-    Executor -->|Execute| Git[(Git Repository)]
-    Git -->|Result| Executor
-    Executor -->|CLI Output| User
+    Dispatcher -->|git.*| GitTools[Git Tools]
+    GitTools -->|Execute| Git[(Git Repository)]
+    Git -->|Result| Dispatcher
+    Dispatcher -->|CLI Output| User
     
     subgraph Core Logic
     Router
     Policy
-    Executor
+    Dispatcher
     MCP
     end
 ```
@@ -122,11 +123,18 @@ Follow the on-screen prompts:
 ```
 v-shell/
 ├── app/
-│   ├── audio/      # 🎧 Audio recording & STT
-│   ├── core/       # ⚙️ Core logic & execution
-│   ├── llm/        # 🧠 LLM routing & intelligence
-│   └── cli/        # 🖥️ User Interface
-├── tests/          # 🧪 Test suite
+│   ├── audio/          # 🎧 Audio recording & STT
+│   ├── core/           # ⚙️ Core logic & execution
+│   │   ├── executor.py     # execute_tool dispatcher
+│   │   ├── models.py       # ToolCall, AppConfig
+│   │   └── tools/          # Modular tool implementations
+│   │       ├── git/        # status, diff, pull, commit_push
+│   │       ├── docker/     # (placeholder)
+│   │       └── system/     # (placeholder)
+│   ├── llm/            # 🧠 LLM routing & intelligence
+│   ├── intent/         # SetFit intent classifier
+│   └── mcp/            # MCP Server
+├── tests/              # 🧪 Test suite
 └── ...
 ```
 
