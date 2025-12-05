@@ -89,12 +89,28 @@ class Brain:
             
         logger.info(f"Processing intent for: {text}")
         
+        # 1. Try SetFit Classifier (Fast & Local)
+        try:
+            from app.intent.setfit_router import SetFitIntentClassifier
+            # Lazy load singleton-ish
+            if not hasattr(self, '_classifier'):
+                self._classifier = SetFitIntentClassifier()
+            
+            label, confidence = self._classifier.predict_intent(text)
+            logger.info(f"SetFit prediction: {label} ({confidence:.2f})")
+            
+            if confidence >= 0.6 and label != "help":
+                confirm = label in ["smart_commit_push", "git_pull", "git_push", "git_commit", "git_reset"]
+                return ToolCall(tool=label, params={}, confirmation_required=confirm)
+        except Exception as e:
+            logger.warning(f"SetFit classification failed (falling back to LLM): {e}")
+
+        # 2. Fallback to LLM
+        return await self._process_llm(text)
+
+    async def _process_llm(self, text: str) -> ToolCall:
         async def _call_llm() -> ToolCall:
             if self.provider == "groq" and self.groq_client:
-                # Wrap sync call in async for retry logic compatibility if needed, 
-                # but with_retries handles sync functions if they return the value directly? 
-                # No, with_retries expects an Awaitable. We need to wrap sync calls.
-                # Actually, let's just make the inner function async and do the sync call inside.
                 completion = self.groq_client.chat.completions.create(
                     model=self.config.groq_model,
                     messages=[
@@ -112,7 +128,6 @@ class Brain:
                 return ToolCall(**data)
             
             elif self.provider == "gemini" and self.gemini_model:
-                # Gemini generate_content is sync by default in this SDK version usually
                 response = self.gemini_model.generate_content(
                     f"{SYSTEM_PROMPT}\n\nUser: {text}",
                     generation_config={"response_mime_type": "application/json"}
@@ -128,7 +143,6 @@ class Brain:
             tool_call = await with_retries(lambda: _call_llm(), retries=2)
             
             # Heuristic Safety Override
-            # Ensure dangerous commands always require confirmation, even if LLM forgot
             dangerous_keywords = ["commit", "push", "pull", "reset", "discard"]
             if any(k in text.lower() for k in dangerous_keywords) or \
                tool_call.tool in [GitTool.SMART_COMMIT_PUSH, GitTool.PUSH, GitTool.PULL, GitTool.RESET, GitTool.COMMIT]:

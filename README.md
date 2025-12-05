@@ -13,12 +13,12 @@
 ## ✨ Key Features
 
 - 🗣️ **Voice-Activated**: Just say "Hey Git" (coming soon) or trigger the listener to start.
-- 🧠 **Natural Language Understanding**: Don't memorize flags. Just say "undo the last commit" or "push to main".
-- 🛡️ **Safety First**: Critical commands (like `push`, `reset`, `commit`) require your confirmation.
+- 🧠 **Hybrid Intelligence**: Uses local **SetFit** models for instant reactions to common commands, falling back to LLMs for complex intent.
+- 🛡️ **Simplified Safety**: Dangerous commands (`push`, `smart_commit`) ask for a simple keyboard "Yes/No". No complex voice confirmations.
+- ⚡ **Smart Commit**: Single command: "status -> stage -> generate message -> commit -> push".
 - 🔄 **Robustness**: Automatic retries for flaky commands and network issues.
 - 📊 **Metrics**: Tracks usage stats for improvement.
 - 🔌 **Model Agnostic**: Bring your own keys! Supports **Groq**, **Gemini**, **Ollama**, and **Faster-Whisper**.
-- ⚡ **Fast & Efficient**: Optimized for low-latency interactions.
 
 ## 🏗️ Architecture
 
@@ -26,7 +26,9 @@
 flowchart TD
     User([User]) -->|Voice Command| Audio[Audio Input]
     Audio -->|WAV| STT[STT Engine\n(Faster-Whisper)]
-    STT -->|Text| Router[LLM Router\n(Brain)]
+    STT -->|Text| Intent[Intent Classifier\n(SetFit)]
+    Intent -- High Conf --> Policy
+    Intent -- Low Conf --> Router[LLM Router\n(Brain)]
     Router -->|ToolCall| Policy{Tool Policy\n(Safety Gate)}
     
     Policy -->|Safe/Confirmed| Executor[Git Executor]
@@ -46,7 +48,7 @@ flowchart TD
 ## 🛠️ Tech Stack
 
 - **Core**: Python 3.x, Pydantic, GitPython
-- **AI/ML**: Faster-Whisper, Groq API, Google Gemini, Ollama
+- **AI/ML**: SetFit (Local), Faster-Whisper, Groq API, Google Gemini, Ollama
 - **CLI**: Rich terminal interface (planned)
 
 ## 🚀 Getting Started

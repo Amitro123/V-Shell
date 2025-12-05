@@ -48,6 +48,10 @@ htmlcov/
 *.wav
 *.mp3
 *.flac
+.tmp_audio/
 
 # Metrics
 metrics.jsonl
+
+# Models
+.models/

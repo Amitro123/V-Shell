@@ -11,10 +11,12 @@ v-shell (internally referred to as GitVoice) is a voice-controlled shell assista
 
 ## Core Features
 
-### Voice Interaction
+### Voice & Intent
 - **Wake Word Detection**: (Planned/In-progress) Activation via "hey git".
 - **Speech-to-Text**: Transcription of voice commands using providers like Faster-Whisper or Groq.
-- **Natural Language Understanding**: Interpretation of user intent using LLMs (Groq, Gemini, Ollama).
+- **Hybrid Intent Classification**:
+    - **Local (SetFit)**: Fast, offline classification for common commands (`status`, `test`, `push`).
+    - **Cloud (LLM)**: Fallback to Groq/Gemini/Ollama for complex queries.
 
 ### Git Operations
 Supported commands include:
@@ -33,7 +35,7 @@ Supported commands include:
 
 ### Safety & Configuration
 - **Tool Policies**: Granular control over safety and retries via `ToolPolicy`.
-    - **Confirmation**: Required for destructive actions (push, pull, commit, reset).
+    - **Confirmation**: Simple keyboard confirmation (`Confirm.ask`) for destructive actions (push, pull, commit, reset). No voice confirmation.
     - **Retries**: Automatic retries for flaky commands (e.g., network issues, test failures).
 - **Configurable Providers**: Switch between different LLM and STT backends via `config.py` / `.env`.
 - **Metrics**: Usage logging to `metrics.jsonl` for debugging and analysis.
@@ -42,7 +44,9 @@ Supported commands include:
 
 1.  **Audio Input**: Captures user voice.
 2.  **STT Engine**: Transcribes audio to text (English enforced).
-3.  **LLM Router**: Analyzes text to determine intent and extract parameters (Tool Calling).
+3.  **Intent Router**:
+    - **Fast Path**: SetFit classifier checks for common intents locally.
+    - **Slow Path**: LLM Router analyzes complex text if SetFit confidence is low.
 4.  **Tool Policy**: Checks safety requirements and retry configuration.
 5.  **Git Executor**: Safely executes the determined Git command using `GitPython`.
 6.  **Feedback**: Returns success/failure status and output to the user (via CLI/TTS).
@@ -54,6 +58,7 @@ Supported commands include:
     - `GitPython`: Interaction with Git repositories.
 - **AI/ML**:
     - `faster-whisper` / `groq`: Speech-to-Text.
+    - `setfit` / `sentence-transformers`: Local intent classification.
     - `groq` / `google-generativeai` / `ollama`: LLM inference.
 - **Testing**: `pytest`
 
