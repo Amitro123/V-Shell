@@ -25,11 +25,11 @@
 ```mermaid
 flowchart TD
     User([User]) -->|Voice Command| Audio[Audio Input]
-    Audio -->|WAV| STT[STT Engine\n(Faster-Whisper)]
-    STT -->|Text| Intent[Intent Classifier\n(SetFit)]
+    Audio -->|WAV| STT["STT Engine\n(Faster-Whisper)"]
+    STT -->|Text| Intent["Intent Classifier\n(SetFit)"]
     Intent -- High Conf --> Policy
-    Intent -- Low Conf --> Router[LLM Router\n(Brain)]
-    Router -->|ToolCall| Policy{Tool Policy\n(Safety Gate)}
+    Intent -- Low Conf --> Router["LLM Router\n(Brain)"]
+    Router -->|ToolCall| Policy{"Tool Policy\n(Safety Gate)"}
     
     Policy -->|Safe/Confirmed| Executor[Git Executor]
     Policy -->|Unsafe/No Confirm| Cancel([Cancel])
