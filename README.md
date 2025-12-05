@@ -25,6 +25,8 @@
 ```mermaid
 flowchart TD
     User([User]) -->|Voice Command| Audio[Audio Input]
+    External([External Clients\nIDEs/Agents]) -->|MCP Tools| MCP["MCP Server\n(FastMCP)"]
+    
     Audio -->|WAV| STT["STT Engine\n(Faster-Whisper)"]
     STT -->|Text| Intent["Intent Classifier\n(SetFit)"]
     Intent -- High Conf --> Policy
@@ -34,14 +36,17 @@ flowchart TD
     Policy -->|Safe/Confirmed| Executor[Git Executor]
     Policy -->|Unsafe/No Confirm| Cancel([Cancel])
     
+    MCP -->|Direct Call| Executor
+    
     Executor -->|Execute| Git[(Git Repository)]
     Git -->|Result| Executor
-    Executor -->|Feedback| User
+    Executor -->|CLI Output| User
     
     subgraph Core Logic
     Router
     Policy
     Executor
+    MCP
     end
 ```
 

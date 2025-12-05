@@ -62,6 +62,34 @@ Supported commands include:
 5.  **Git Executor**: Safely executes the determined Git command using `GitPython`.
 6.  **Feedback**: Returns success/failure status and output to the user (via CLI/TTS).
 
+```mermaid
+flowchart TD
+    User([User]) -->|Voice Command| Audio[Audio Input]
+    External([External Clients\nIDEs/Agents]) -->|MCP Tools| MCP["MCP Server\n(FastMCP)"]
+    
+    Audio -->|WAV| STT["STT Engine\n(Faster-Whisper)"]
+    STT -->|Text| Intent["Intent Classifier\n(SetFit)"]
+    Intent -- High Conf --> Policy
+    Intent -- Low Conf --> Router["LLM Router\n(Brain)"]
+    Router -->|ToolCall| Policy{"Tool Policy\n(Safety Gate)"}
+    
+    Policy -->|Safe/Confirmed| Executor[Git Executor]
+    Policy -->|Unsafe/No Confirm| Cancel([Cancel])
+    
+    MCP -->|Direct Call| Executor
+    
+    Executor -->|Execute| Git[(Git Repository)]
+    Git -->|Result| Executor
+    Executor -->|CLI Output| User
+    
+    subgraph Core Logic
+    Router
+    Policy
+    Executor
+    MCP
+    end
+```
+
 ## Tech Stack
 - **Language**: Python 3.x
 - **Core Libraries**:
