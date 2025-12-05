@@ -7,22 +7,39 @@ from rich.panel import Panel
 from app.config import load_config
 from app.audio.recorder import AudioRecorder
 from app.audio.stt import Transcriber
-from app.audio.stt import Transcriber
 from app.llm.router import Brain
 from app.core.executor import execute_tool
-from app.core.models import GitTool, ToolCall
+from app.core.models import ToolCall
 from app.core.metrics import MetricsLogger
 from app.core.policies import TOOL_POLICIES, ToolPolicy
 
-# ... initialization ...
+# Configure logging
+logging.basicConfig(
+    level=logging.WARNING, 
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger("gitvoice")
 
+console = Console()
+
+async def main():
+    console.print(Panel.fit("[bold green]GitVoice[/bold green] - Hands-Free Git Assistant", border_style="green"))
+    
+    # Load config
+    try:
+        config = load_config()
+        logging.getLogger().setLevel(config.log_level)
+    except Exception as e:
+        console.print(f"[bold red]Configuration error:[/bold red] {e}")
+        return
+    
     # Initialize components
     with console.status("[bold green]Initializing components...[/bold green]"):
         try:
             recorder = AudioRecorder(config)
             transcriber = Transcriber(config)
             brain = Brain(config)
-            # Executor is now stateless (function modules), no instantiation needed
             metrics_logger = MetricsLogger()
         except Exception as e:
             console.print(f"[bold red]Initialization failed:[/bold red] {e}")
@@ -93,7 +110,6 @@ from app.core.policies import TOOL_POLICIES, ToolPolicy
 
     try:
         while True:
-            # ... (Recording loop unchanged) ...
             console.print("\n[bold blue]Press Enter to START recording (or 'q' to quit)...[/bold blue]")
             cmd = input().strip().lower()
             if cmd == 'q':

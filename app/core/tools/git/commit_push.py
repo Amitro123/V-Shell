@@ -16,21 +16,22 @@ async def smart_commit_push(
         # 1. Status (check if repo is mostly clean)
         # 2. Add all
         if auto_stage:
-            repo.git.add(".")
-        
+            repo.git.add("-u")  # Only stage modified/deleted tracked files        
         # 3. Get diff & Generate Message
         diff = repo.git.diff("--staged")
         if not diff:
             return "", "No changes to commit.", 1
             
         message = brain.generate_commit_message(diff)
+        if not brain:
+            return "", "Brain (LLM) instance required for commit message generation.", 1
+            
+        message = brain.generate_commit_message(diff)
         
         # Confirmation Step
         if confirm_callback:
             if not confirm_callback(message): # Pass message to verify
-                return message, "Smart commit cancelled by user.", 1
-        
-        # 4. Commit
+                return message, "Smart commit cancelled by user.", 1        # 4. Commit
         repo.git.commit("-m", message)
         
         output = f"Committed: '{message}'"

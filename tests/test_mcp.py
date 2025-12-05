@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
-from app.core.models import GitTool, ToolCall, CommandResult
+from app.core.models import ToolCall
 
 
 @pytest.fixture
@@ -31,7 +31,7 @@ async def test_mcp_git_status(mock_execute_tool):
 async def test_mcp_run_tests(mock_execute_tool):
     mock_execute_tool.return_value = {"stdout": "Tests passed", "exit_code": 0, "success": True}
     
-    result = await run_tests(command="pytest")
+    result = await run_tests()
     
     assert result["stdout"] == "Tests passed"
     mock_execute_tool.assert_called_once()

@@ -29,10 +29,10 @@ async def git_status() -> dict:
     return await execute_tool(tc, config=config, brain=brain)
 
 @server.tool()
-async def run_tests(command: Optional[str] = None) -> dict:
-    """Run the configured test command (e.g. pytest or npm test)."""
+async def run_tests() -> dict:
+    """Run the project test suite using pytest."""
     config, brain = get_context()
-    tc = ToolCall(tool="git.run_tests", params={"command": command}, confirmation_required=False)
+    tc = ToolCall(tool="git.run_tests", params={}, confirmation_required=False)
     return await execute_tool(tc, config=config, brain=brain)
 
 @server.tool()

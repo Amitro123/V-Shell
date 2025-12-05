@@ -30,6 +30,10 @@ TRAIN_EXAMPLES = [
     ("status then commit and push", "git.smart_commit_push"),
     ("save everything and push", "git.smart_commit_push"),
     ("write commit and push", "git.smart_commit_push"),
+    ("git status, git add, git commit and git push", "git.smart_commit_push"),
+    ("do everything: status, add, commit and push", "git.smart_commit_push"),
+    ("prepare commit and push my changes", "git.smart_commit_push"),
+    ("check status and then commit and push", "git.smart_commit_push"),
 
     # git_diff
     ("show me the diff", "git.diff"),

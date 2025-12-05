@@ -1,7 +1,7 @@
 import logging
 import json
 from typing import Optional
-from app.core.models import AppConfig, ToolCall, GitTool
+from app.core.models import AppConfig, ToolCall
 from app.core.retry import with_retries
 
 logger = logging.getLogger(__name__)
@@ -34,6 +34,7 @@ Rules:
 - For "smart commit" or "commit and push", use git.smart_commit_push.
 - For "pull" or "update code", use git.pull.
 - If the user asks to "fix conflicts", use 'help' for now as it's not fully implemented.
+- If the user mentions more than one Git action in a single utterance (e.g. status + add/commit/push), you MUST return a single tool: git.smart_commit_push with appropriate parameters. Never return git.status or git.add or git.commit alone for such compound commands.
 - For compound commands like "status and commit", "add and push", or "do everything", use git.smart_commit_push.
 
 Robustness Rules:
@@ -85,10 +86,22 @@ class Brain:
     async def process(self, text: str) -> ToolCall:
         """Process natural language text into a structured ToolCall."""
         if not text:
-            return ToolCall(tool=GitTool.HELP, explanation="I didn't hear anything.")
+            return ToolCall(tool="help", explanation="I didn't hear anything.")
             
         logger.info(f"Processing intent for: {text}")
         
+        # 0. Deterministic Guard for Compound Commands
+        # If user explicitly asks for status + commit/push, force smart_commit_push
+        # explicitly enabling auto_stage and push
+        if self._should_force_smart_commit_push(text):
+            logger.info("Deterministic guard: Detected compound command -> git.smart_commit_push")
+            return ToolCall(
+                tool="git.smart_commit_push", 
+                params={"auto_stage": True, "push": True}, 
+                confirmation_required=True,
+                explanation="Detected compound command."
+            )
+
         # 1. Try SetFit Classifier (Fast & Local)
         try:
             from app.intent.setfit_router import SetFitIntentClassifier
@@ -123,7 +136,7 @@ class Brain:
                 data = json.loads(content)
                 if isinstance(data, list):
                     if not data:
-                        return ToolCall(tool=GitTool.HELP, explanation="Empty response from LLM.")
+                        return ToolCall(tool="help", explanation="Empty response from LLM.")
                     data = data[0]
                 return ToolCall(**data)
             
@@ -152,7 +165,15 @@ class Brain:
             
         except Exception as e:
             logger.error(f"Intent parsing failed after retries: {e}")
-            return ToolCall(tool=GitTool.HELP, explanation=f"I couldn't understand that. Error: {e}")
+            return ToolCall(tool="help", explanation=f"I couldn't understand that. Error: {e}")
+
+    def _should_force_smart_commit_push(self, text: str) -> bool:
+        """Check if text contains multiple Git actions implying a smart commit."""
+        t = text.lower()
+        has_status = "status" in t
+        has_commit_or_push = any(w in t for w in ["commit", "push"])
+        # If it has status AND (commit OR push), it's a compound flow
+        return has_status and has_commit_or_push
 
     def generate_commit_message(self, diff: str) -> str:
         """Generate a concise commit message based on the diff."""

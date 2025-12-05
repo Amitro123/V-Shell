@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, Mock, patch, PropertyMock
-from app.llm.router import Brain, GitTool, ToolCall
+from app.llm.router import Brain, ToolCall
 
 # Mock Data
 MOCK_TEXT = "git status"
@@ -86,3 +86,16 @@ async def test_process_llm_safety_override(mock_with_retries, brain):
     
     # "push" is a dangerous keyword, so it should flip to True
     assert result.confirmation_required is True
+
+@pytest.mark.asyncio
+async def test_deterministic_guard_compound_command(brain):
+    # Test that "status + commit/push" forces smart_commit_push WITHOUT calling LLM or SetFit
+    
+    # We don't even need to mock SetFit or LLM if the guard works first
+    result = await brain.process("git status, git add, git commit and git push")
+    
+    assert result.tool == "git.smart_commit_push"
+    assert result.params.get("auto_stage") is True
+    assert result.params.get("push") is True
+    assert result.confirmation_required is True
+

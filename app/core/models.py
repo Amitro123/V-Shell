@@ -1,24 +1,11 @@
 # Data models
 """Pydantic models for GitVoice."""
-from enum import Enum
 from typing import Any, Optional
 from pydantic import BaseModel, Field
-class GitTool(str, Enum):
-    """Available Git tools."""
-    
-    STATUS = "git.status"
-    LOG = "git.log" # Not implemented as tool yet, keeping for now
-    DIFF = "git.diff"
-    ADD_ALL = "git.add_all" # Not implemented as standalone tool yet (part of smart commit)
-    COMMIT = "git.commit" # Not implemented as standalone tool yet
-    PUSH = "git.push" # Not implemented as standalone tool yet
-    RESET = "git.reset" # Not implemented as standalone yet
-    CHECKOUT_BRANCH = "git.checkout_branch" # Not implemented as standalone yet
-    CREATE_BRANCH = "git.create_branch" # Not implemented as standalone yet
-    RUN_TESTS = "git.run_tests"
-    SMART_COMMIT_PUSH = "git.smart_commit_push"
-    PULL = "git.pull"
-    HELP = "help"
+
+# Tool name constants for reference (not enforced by type system)
+# All tool names use dot notation: "git.status", "git.diff", "docker.ps", etc.
+# See app/core/tools/ for implementations.
 
 class ToolCall(BaseModel):
     """Parsed intent as a structured tool call."""

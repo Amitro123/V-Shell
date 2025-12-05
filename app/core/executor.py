@@ -52,10 +52,7 @@ async def execute_tool(tool_call: ToolCall, config: AppConfig = None, brain=None
             return {"stdout": stdout, "exit_code": code, "success": code == 0}
 
         if name == "git.run_tests":
-            command = tool_call.params.get("command")
-            stdout, code = await run_tests(command=command)
-            # run_tests returns combined output in stdout if failure, or split?
-            # The implementation creates combined output if code != 0.
+            stdout, code = await run_tests()
             return {"stdout": stdout, "exit_code": code, "success": code == 0}
 
         if name == "git.smart_commit_push":
