@@ -77,6 +77,11 @@ async def execute_tool(tool_call: ToolCall, config: AppConfig = None, brain=None
             # confirm_callback = tool_call.params.get("confirm_callback")
             # This is already in params, so copy() preserved it.
 
+        if name == "git.branch":
+            branch_name = params.get("name")
+            if not branch_name:
+                 return {"stdout": "", "stderr": "git.branch requires a 'name' parameter", "exit_code": 1, "success": False}
+
         # Execute
         result = await func(**call_params)
 
