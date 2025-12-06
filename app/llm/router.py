@@ -18,7 +18,7 @@ Available tools:
 - git.commit: Commit changes (params: message [required])
 - git.push: Push to remote (params: remote [default origin], branch [optional])
 - git.pull: Pull from remote (params: remote [default origin], branch [optional])
-- git.reset: Reset changes (params: mode [soft, mixed, hard], commits [default 1])
+- git.reset: Reset changes (params: mode [soft, mixed, hard], steps [default 1])
 - git.branch: Create or switch branches (params: name [required], create [boolean, default false])
 - git.run_tests: Run the project's test suite
 - git.smart_commit_push: Automatically stage, commit (with generated message), and push

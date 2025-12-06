@@ -1,52 +1,55 @@
 # Code Review: v-shell (GitVoice)
 
-**Date:** 2025-02-18
-**Reviewer:** Jules (AI Software Engineer)
-**Scope:** Architecture, Code Quality, Security, and Testing.
+**Date:** 2024-05-22
+**Reviewer:** Jules (AI Agent)
 
-## 1. Executive Summary
+## 1. Overview
+This review analyzes the current state of the `v-shell` project against its specifications (`spec.md`), documentation (`README.md`, `AGENTS.md`), and best practices. The project aims to be a voice-controlled Git assistant using hybrid AI (local SetFit + LLM).
 
-v-shell (GitVoice) has evolved into a functional voice-controlled Git assistant. The core architecture (Audio -> STT -> Brain -> Tool Execution) is sound. Recent updates have improved safety (confirmation steps for smart commits), dependency management, and test coverage.
+## 2. Findings
 
-## 2. Resolved Issues (vs Previous Review/Roadmap)
+### 2.1. Tool Discrepancies (Critical)
+There is a significant mismatch between the tools advertised to the LLM (`app/llm/router.py`) and the tools actually implemented and registered (`app/core/executor.py`).
 
-- **Smart Commit Safety**: The `smart_commit_push` tool now accepts a `confirm_callback`. `main.py` implements this callback to ask the user for confirmation *after* the commit message is generated but *before* committing.
-- **Audio Recording**: The "Press Enter to Start/Stop" flow is correctly implemented, replacing the rigid fixed-duration recording.
-- **Dependencies**: `requirements.txt` and `pyproject.toml` are now aligned. `openwakeword` was removed to fix installation issues (it was unused).
-- **Tool Naming**: Fixed inconsistencies between policy definition (underscore) and router/executor (dot notation).
-- **Module Conflicts**: Renamed `app/core/tools/git` to `app/core/tools/git_ops` to avoid conflicts with `gitpython`'s `git` module.
-- **Test Coverage**: Added robust tests for Executor, Router, MCP, and Smart Commit logic. All tests pass.
+-   **Missing Tools**: The Router advertises `git.commit` (with message) and `git.push` (with remote/branch), but these are **not registered** in `executor.py`.
+    -   *Impact*: If the LLM router chooses `git.commit` or `git.push` (instead of `smart_commit_push`), the execution will fail with "Unknown tool".
+-   **Parameter Mismatch**:
+    -   `git.reset`: Router prompt advertises `commits` parameter, but implementation (`git_ops/reset.py`) expects `steps`.
+    -   `git.branch`: Router correctly uses `create` boolean, and `executor.py` maps it to `git_checkout_branch`, which is good.
+-   **Aliases**: `git.add_all` is correctly mapped. `git.status` is correct.
 
-## 3. Architecture & Design Analysis
+### 2.2. Safety & Confirmation Logic
+The safety mechanism is split and potentially inconsistent.
+-   **Router vs. Policy**: `app/llm/router.py` sets `confirmation_required=True` dynamically for dangerous actions. However, `app/main.py` relies primarily on `TOOL_POLICIES` defined in `app/core/policies.py`.
+    -   *Risk*: If `router.py` flags a command as unsafe but `TOOL_POLICIES` defaults to safe (or is missing the tool), the confirmation prompt might be skipped.
+    -   *Current State*: `main.py` ignores `tool_call.confirmation_required`.
+-   **Smart Commit**: `git.smart_commit_push` has embedded confirmation logic (callback) AND policy-based confirmation. This redundancy is confusing but currently safe.
 
-### Strengths
-- **Manual Trigger**: The manual start/stop recording is reliable and simple.
-- **Hybrid Intelligence**: Retained SetFit + LLM fallback.
-- **Safety**: `smart_commit_push` now correctly checks for confirmation.
+### 2.3. Architecture & Code Quality
+-   **Dependency injection**: `executor.py` injects `brain` into `smart_commit_push`. This is a bit leaky (tool knowing about the brain) but acceptable for this stage.
+-   **Git Implementation**: The project uses `subprocess` calls to `git` CLI (via `git_ops/utils.py`) instead of `GitPython` for operations, despite `GitPython` being a dependency. This is actually good for performance and reducing blocking calls, but `GitPython` is still used in tests.
+-   **Hardcoded Configuration**: `executor.py` has `SIMPLE_GIT_TOOLS` hardcoded. It should ideally be part of the registry or configuration.
 
-### Remaining Weaknesses / Risks
-- **"Smart" Staging Logic**: `smart_commit_push` now uses `git add -A` (via `auto_stage=True`) which stages *everything* (new, modified, deleted). This is powerful but risky if the user has untracked files they didn't intend to commit (e.g., secrets, temp files). Users *must* rely on `.gitignore`.
-- **Hardcoded Models**: `AppConfig` in `app/core/models.py` has default model names (e.g., `llama-3.1-8b-instant`). As models evolve rapidly, these should be externalized to a config file.
-- **Blocking Operations**: Some Git operations (like `pull` or large `diff`) are synchronous and might block the main loop, though `execute_tool` is async, the underlying `gitpython` calls are sync.
+### 2.4. Testing
+-   **Coverage**: Core git operations (`git_ops`) and integration tests pass.
+-   **Missing Dependencies**: Tests for `router` and `mcp` fail because `groq` and `fastmcp` libraries are missing in the test environment (or requirements).
+-   **Mocking**: Tests rely heavily on mocking `subprocess`, which is fine, but integration tests with real git repos (like `test_integration_git.py`) are more valuable.
 
-## 4. Recommendations & Roadmap
+## 3. Recommendations & Action Plan
 
-### Short Term
-1.  **Configuration Externalization**:
-    - Move default model names and other constants to a user-editable configuration file (e.g., `~/.gitvoice/config.yaml` or `.env` defaults).
-2.  **Integration Tests**:
-    - Create tests that use a real temporary Git repository (via `pytest` `tmp_path`) to verify that `git_ops` actually modify the repo state as expected, rather than just asserting that mocks were called.
+### 3.1. Immediate Fixes (Implemented in this PR)
+1.  **Implement `git.commit` and `git.push`**: Add these atomic tools to `git_ops` and register them in `executor.py`.
+2.  **Align `git.reset`**: Update Router prompt to use `steps` or map `commits` to `steps` in executor.
+3.  **Unify Safety Checks**: Update `main.py` to respect **either** `policy.confirmation_required` OR `tool_call.confirmation_required`.
 
-### Medium Term
-3.  **Docker & System Tools**:
-    - Implement the placeholder `docker` and `system` tools to expand capabilities beyond Git.
-4.  **Wake Word (Re-visit)**:
-    - Re-integrate `openwakeword` or a similar lightweight wake word engine once dependency conflicts (specifically `tflite-runtime`) are resolved.
+### 3.2. Future Improvements
+1.  **Context Injection**: The `Brain` currently doesn't see the current git status or history when making decisions. Injecting `git status` output into the LLM system prompt would significantly improve "context-aware" commands.
+2.  **Interactive Conflict Resolution**: As noted in roadmap, handling merge conflicts via voice is a killer feature.
+3.  **Refined Router**: The SetFit classifier is a great optimization. Ensure it's retrained as new tools are added.
+4.  **Feedback Loop**: Implement TTS (Text-to-Speech) to read back the commit message or status.
 
-### Long Term
-5.  **Context-Aware Undo**:
-    - Implement a "undo last action" feature that understands the git reflog.
+## 4. Suggestions for Development
+-   **Keep `subprocess`**: Using `git` CLI via subprocess is robust. Stick to it.
+-   **Enhance `smart_commit`**: Allow it to take a "hint" for the message from the user's voice command (e.g., "Smart commit with message 'fix login'").
+-   **Pre-commit Hooks**: Add `pre-commit` to run tests and linters automatically.
 
-## 5. Conclusion
-
-The project is in a good state for usage. The critical safety and stability issues have been addressed. The focus should now shift to extensibility (config) and robustness (integration tests).
