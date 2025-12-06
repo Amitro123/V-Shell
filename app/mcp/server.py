@@ -1,4 +1,4 @@
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 from typing import Optional
 from app.core.executor import execute_tool
 from app.core.models import ToolCall, AppConfig

@@ -43,6 +43,9 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+*_log.txt
+test_output.txt
+router_log.txt
 
 # Audio files
 *.wav

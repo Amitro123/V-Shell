@@ -33,8 +33,8 @@ flowchart TD
     Intent -- Low Conf --> Router["LLM Router\n(Brain)"]
     Router -->|ToolCall| Policy{"Tool Policy\n(Safety Gate)"}
     
-    Policy -->|Safe/Confirmed| Dispatcher["execute_tool\n(Dispatcher)"]
-    Policy -->|Unsafe/No Confirm| Cancel([Cancel])
+    Policy -->|Read-only OR\nUser Confirmed| Dispatcher["execute_tool\n(Dispatcher)"]
+    Policy -->|Requires Confirmation\nUser Declined| Cancel([Cancel])
     
     MCP -->|Direct Call| Dispatcher
     
@@ -50,6 +50,13 @@ flowchart TD
     MCP
     end
 ```
+
+**How the Safety Gate Works:**
+- **Read-only tools** (e.g., `git.status`, `git.diff`, `git.log`) → Execute immediately
+- **Write tools** (e.g., `git.push`, `git.commit`, `smart_commit_push`) → Prompt user for confirmation
+  - If user confirms → Execute
+  - If user declines → Cancel operation
+
 
 ## 🛠️ Tech Stack
 
