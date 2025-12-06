@@ -1,28 +1,18 @@
+from typing import Tuple, Optional
 import subprocess
-import sys
-from typing import Tuple
 
-async def run_tests() -> Tuple[str, int]:
+async def run_tests(command: Optional[str] = None) -> Tuple[str, int]:
     """
-    Run project tests using pytest.
-    Returns (stdout, exit_code).
+    Run tests using the configured command (e.g. 'pytest').
     """
+    cmd = (command or "pytest").split()
+    # Using specific handling for tests as requested (not run_git)
+    # But using subprocess directly as per prompt example for tests.py
     try:
-        # Using sys.executable ensures we use the same venv
-        cmd = [sys.executable, "-m", "pytest"]
-        
-        result = subprocess.run(
-            cmd, 
-            capture_output=True, 
-            text=True, 
-            check=False
-        )
-        
-        output = result.stdout
-        if result.returncode != 0:
-            output += "\n" + result.stderr
-            
-        return output, result.returncode
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        stdout = proc.stdout
+        if proc.stderr:
+             stdout += "\n" + proc.stderr
+        return stdout, proc.returncode
     except Exception as e:
         return str(e), 1
-

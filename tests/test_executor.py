@@ -3,21 +3,18 @@ from unittest.mock import MagicMock, patch
 from app.core.executor import execute_tool
 from app.core.models import ToolCall, AppConfig
 
-# Mock Git functions directly to avoid initializing Repo
+# Mock Git functions directly
 @pytest.fixture
 def mock_git_modules():
     with patch("app.core.executor.git_status") as mock_status, \
          patch("app.core.executor.smart_commit_push") as mock_commit, \
-         patch("app.core.executor.get_repo") as mock_repo, \
          patch("app.core.executor.run_tests") as mock_tests, \
          patch("app.core.executor.git_diff") as mock_diff, \
          patch("app.core.executor.git_checkout_branch") as mock_branch:
         
-        mock_repo.return_value = MagicMock()
         yield {
             "status": mock_status,
             "commit": mock_commit,
-            "repo": mock_repo,
             "tests": mock_tests,
             "diff": mock_diff,
             "branch": mock_branch
@@ -48,13 +45,17 @@ async def test_execute_commit(mock_config, mock_git_modules):
     brain_mock = MagicMock()
     
     tool_call = ToolCall(tool="git.smart_commit_push", params={"push": False})
-    # smart_commit_push returns 3 values now: msg, stdout, code
     
     result = await execute_tool(tool_call, config=mock_config, brain=brain_mock)
     
     assert result["success"]
     assert result["stdout"] == "master 1234567"
+    # Logic in executor now passes simple params, and injects brain
     mock_git_modules["commit"].assert_called_once()
+    # Check arguments
+    call_kwargs = mock_git_modules["commit"].call_args[1]
+    assert call_kwargs["push"] is False
+    assert call_kwargs["brain"] == brain_mock
 
 @pytest.mark.asyncio
 async def test_execute_branch(mock_config, mock_git_modules):
@@ -65,7 +66,7 @@ async def test_execute_branch(mock_config, mock_git_modules):
     
     assert result["success"]
     assert "Switched" in result["stdout"]
-    mock_git_modules["branch"].assert_called_with("new-feature", create=True)
+    mock_git_modules["branch"].assert_called_with(name="new-feature", create=True)
 
 @pytest.mark.asyncio
 async def test_execute_diff(mock_config, mock_git_modules):
@@ -76,9 +77,8 @@ async def test_execute_diff(mock_config, mock_git_modules):
     
     assert result["success"]
     mock_git_modules["diff"].assert_called()
-    # verify args
+    # verify args - execute_tool unpacks **params, so these should be kwargs
     args = mock_git_modules["diff"].call_args
-    # args[0] is positional (repo), args[1] is kwargs
     assert args[1]["path"] == "app/main.py"
     assert args[1]["since_origin_main"] is True
 
@@ -88,4 +88,5 @@ async def test_execute_unknown_tool(mock_config, mock_git_modules):
     
     result = await execute_tool(tool_call, config=mock_config)
     assert not result["success"]
-    assert "Unknown or unimplemented tool" in result["stderr"]
+    # Updated error message matcher
+    assert "Unknown tool" in result["stderr"]

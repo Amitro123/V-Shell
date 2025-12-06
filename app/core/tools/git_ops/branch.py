@@ -1,8 +1,5 @@
 from typing import Tuple
-import subprocess
-import logging
-
-logger = logging.getLogger(__name__)
+from .utils import run_git
 
 async def git_checkout_branch(name: str, create: bool = False) -> Tuple[str, int]:
     """
@@ -10,18 +7,9 @@ async def git_checkout_branch(name: str, create: bool = False) -> Tuple[str, int
     - create=False: git checkout <name>
     - create=True:  git checkout -b <name>
     """
-    cmd = ["git", "checkout"]
+    # Note: 'repo' arg unused if it was ever passed.
+    cmd = ["checkout"]
     if create:
         cmd.append("-b")
     cmd.append(name)
-
-    logger.info("Running: %s", " ".join(cmd))
-    try:
-        proc = subprocess.run(cmd, capture_output=True, text=True)
-        stdout = proc.stdout
-        if proc.stderr:
-            stdout += "\n" + proc.stderr
-        return stdout, proc.returncode
-    except Exception as e:
-        logger.error(f"git checkout failed: {e}")
-        return str(e), 1
+    return await run_git(cmd)

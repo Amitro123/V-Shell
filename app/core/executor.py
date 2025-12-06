@@ -1,105 +1,116 @@
 import logging
-import git
-from rich.console import Console
+import asyncio
+from typing import Callable, Awaitable, Any, Dict
 from app.core.models import ToolCall, AppConfig
+
+# Import Git tool functions
+# Note: Using git_ops as the directory name per codebase reality
 from app.core.tools.git_ops.status import git_status
 from app.core.tools.git_ops.diff import git_diff
-from app.core.tools.git_ops.test_runner import run_tests
-from app.core.tools.git_ops.commit_push import smart_commit_push
 from app.core.tools.git_ops.pull import git_pull
+from app.core.tools.git_ops.test_runner import run_tests  
+from app.core.tools.git_ops.commit_push import smart_commit_push
 from app.core.tools.git_ops.branch import git_checkout_branch
 
 logger = logging.getLogger(__name__)
 
-# Global repo instance to avoid re-opening on every call (optional optimization)
-_repo = None
+ToolFunc = Callable[..., Awaitable[Any]]
 
-def get_repo() -> git.Repo:
-    global _repo
-    if _repo is None:
-        try:
-            _repo = git.Repo(search_parent_directories=True)
-            logger.info(f"Initialized Git repo: {_repo.working_dir}")
-        except git.InvalidGitRepositoryError:
-            logger.error("Not a valid git repository.")
-            raise ValueError("Current directory is not a git repository.")
-        except Exception as e:
-            logger.error(f"Failed to initialize Git repo: {e}")
-            raise e
-    return _repo
+# Tool Registry
+TOOL_REGISTRY: Dict[str, ToolFunc] = {
+    "git.status": git_status,
+    "git.diff": git_diff,
+    "git.pull": git_pull,
+    "git.run_tests": run_tests,
+    "git.smart_commit_push": smart_commit_push,
+    "git.branch": git_checkout_branch,
+}
+
+# Simple tools config
+SIMPLE_GIT_TOOLS: Dict[str, list[str]] = {
+    "git.fetch": ["fetch"],
+    "git.log": ["log", "--oneline", "--decorate", "-n", "20"],
+}
 
 async def execute_tool(tool_call: ToolCall, config: AppConfig = None, brain=None, console=None) -> dict:
     """
-    Dispatch a ToolCall to the correct underlying implementation.
-    Returns a dict with at least { "stdout": str, "exit_code": int } and any extra fields.
+    Dispatch ToolCall via TOOL_REGISTRY.
     """
     name = tool_call.tool
-    logger.info(f"Executing tool: {name} with params: {tool_call.params}")
+    params = tool_call.params or {}
+    
+    logger.info(f"Executing tool: {name} with params: {params}")
 
     try:
-        repo = get_repo()
-    except Exception as e:
-        return {"stdout": "", "stderr": str(e), "exit_code": 1, "success": False}
-
-    try:
-        if name == "git.status":
-            stdout, code = await git_status(repo)
+        # 1. Check SIMPLE_GIT_TOOLS
+        if name in SIMPLE_GIT_TOOLS:
+            from app.core.tools.git_ops.utils import run_git
+            extra_args = params.get("extra_args", [])
+            # If params has other keys that are list of strings, maybe append them? 
+            # But usually params for simple tools might be just extra arguments.
+            # For safety, let's just stick to what the user prompt suggested or basic list.
+            # The prompt example: `extra_args = params.get("extra_args", [])`
+            cmd = SIMPLE_GIT_TOOLS[name] + list(extra_args)
+            stdout, code = await run_git(cmd)
             return {"stdout": stdout, "exit_code": code, "success": code == 0}
 
-        if name == "git.diff":
-            path = tool_call.params.get("path")
-            since_origin_main = tool_call.params.get("since_origin_main", False)
-            stdout, code = await git_diff(repo, path=path, since_origin_main=since_origin_main)
-            return {"stdout": stdout, "exit_code": code, "success": code == 0}
-
-        if name == "git.branch":
-            branch_name = tool_call.params.get("name")
-            create = tool_call.params.get("create", False)
-            stdout, code = await git_checkout_branch(branch_name, create=create)
-            return {"stdout": stdout, "exit_code": code, "success": code == 0}
-
-        if name == "git.run_tests":
-            stdout, code = await run_tests()
-            return {"stdout": stdout, "exit_code": code, "success": code == 0}
-
-        if name == "git.smart_commit_push":
-            auto_stage = tool_call.params.get("auto_stage", True)
-            push = tool_call.params.get("push", True)
-            confirm_callback = tool_call.params.get("confirm_callback")
+        # 2. Check TOOL_REGISTRY
+        func = TOOL_REGISTRY.get(name)
+        if func is None:
+            # Fallback for help or unknown
+            if name == "help":
+                return {"stdout": "I can help you with git commands. Try 'git status' or 'commit changes'.", "exit_code": 0, "success": True}
             
-            if not brain:
-                return {"stdout": "", "stderr": "Brain (LLM) required for smart commit.", "exit_code": 1, "success": False}
+            return {"stdout": "", "stderr": f"Unknown tool: {name}", "exit_code": 1, "success": False}
 
-            commit_message, stdout, code = await smart_commit_push(
-                repo=repo,
-                brain=brain,
-                auto_stage=auto_stage,
-                push=push,
-                confirm_callback=confirm_callback
-            )
-            return {
-                "commit_message": commit_message,
-                "stdout": stdout,
-                "exit_code": code,
-                "success": code == 0
-            }
-
-        if name == "git.pull":
-            remote = tool_call.params.get("remote", "origin")
-            branch = tool_call.params.get("branch")
-            stdout, code = await git_pull(repo, remote=remote, branch=branch)
-            return {"stdout": stdout, "exit_code": code, "success": code == 0}
-
-        if name == "help":
-             return {"stdout": "I can help you with git commands. Try 'git status' or 'commit changes'.", "exit_code": 0, "success": True}
-
-        # Future: docker/system tools or legacy/unimplemented git tools
-        return {"stdout": "", "stderr": f"Unknown or unimplemented tool: {name}", "exit_code": 1, "success": False}
+        # Prepare arguments
+        call_params = params.copy()
         
+        # Inject dependencies if needed
+        # commit_push needs 'brain'
+        if name == "git.smart_commit_push":
+            if not brain:
+                 return {"stdout": "", "stderr": "Brain (LLM) required for smart commit.", "exit_code": 1, "success": False}
+            call_params["brain"] = brain
+            # confirm_callback might be in params (if passed locally) or we might need it? 
+            # Previous executor execution: 
+            # confirm_callback = tool_call.params.get("confirm_callback")
+            # This is already in params, so copy() preserved it.
+
+        # Execute
+        result = await func(**call_params)
+
+        # Normalize result
+        # Tuple[str, int] -> {"stdout": ..., "exit_code": ...}
+        # Tuple[str, str, int] (commit_push) -> {"commit_message": ..., "stdout": ..., "exit_code": ...}
+        # dict -> return as is
+
+        if isinstance(result, tuple):
+            if len(result) == 2:
+                stdout, code = result
+                return {"stdout": stdout, "exit_code": code, "success": code == 0}
+            elif len(result) == 3:
+                # smart_commit_push returns (commit_msg, stdout, code)
+                msg, stdout, code = result
+                return {
+                    "commit_message": msg,
+                    "stdout": stdout,
+                    "exit_code": code,
+                    "success": code == 0
+                }
+            else:
+                # Unexpected tuple length
+                return {"stdout": str(result), "exit_code": 0, "success": True} # Fallback
+
+        if isinstance(result, dict):
+            result.setdefault("exit_code", 0)
+            if "success" not in result:
+                result["success"] = result["exit_code"] == 0
+            return result
+            
+        # Fallback
+        return {"stdout": str(result), "exit_code": 0, "success": True}
+
     except Exception as e:
         logger.exception(f"Tool execution failed: {e}")
         return {"stdout": "", "stderr": str(e), "exit_code": 1, "success": False}
-
-# Keep GitExecutor class for backward compatibility if needed, but we should remove it per plan.
-# Plan says: "Remove GitExecutor class".
-
