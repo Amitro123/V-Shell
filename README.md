@@ -119,6 +119,11 @@ Follow the on-screen prompts:
 
 **Try saying:**
 - *"Check the status"*
+- *"Show me the diff"*
+- *"What changed since origin main"* (Compare against origin/main)
+- *"Show diff for app/main.py"* (Path-specific diff)
+- *"Create branch feature-login"* (Create and switch to new branch)
+- *"Switch to main"* (Switch to existing branch)
 - *"Stage all changes"*
 - *"Smart commit"* (Stages, generates message, confirms, commits, and pushes)
 - *"Run tests"*
@@ -135,7 +140,7 @@ v-shell/
 │   │   ├── executor.py     # execute_tool dispatcher
 │   │   ├── models.py       # ToolCall, AppConfig
 │   │   └── tools/          # Modular tool implementations
-│   │       ├── git/        # status, diff, pull, commit_push
+│   │       ├── git_ops/    # status, diff, branch, pull, commit_push
 │   │       ├── docker/     # (placeholder)
 │   │       └── system/     # (placeholder)
 │   ├── llm/            # 🧠 LLM routing & intelligence
@@ -173,4 +178,4 @@ GitVoice includes an MCP server that you can connect to IDEs like **Claude Deskt
 }
 ```
 
-Available tools: `git_status`, `run_tests`, `git_diff`, `smart_commit_push`, `git_pull`.
+Available tools: `git_status`, `run_tests`, `git_diff`, `git_branch`, `smart_commit_push`, `git_pull`.

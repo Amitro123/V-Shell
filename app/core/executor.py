@@ -7,6 +7,7 @@ from app.core.tools.git_ops.diff import git_diff
 from app.core.tools.git_ops.test_runner import run_tests
 from app.core.tools.git_ops.commit_push import smart_commit_push
 from app.core.tools.git_ops.pull import git_pull
+from app.core.tools.git_ops.branch import git_checkout_branch
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +48,14 @@ async def execute_tool(tool_call: ToolCall, config: AppConfig = None, brain=None
 
         if name == "git.diff":
             path = tool_call.params.get("path")
-            # Handle empty path if params has it but it's None
-            stdout, code = await git_diff(repo, path=path)
+            since_origin_main = tool_call.params.get("since_origin_main", False)
+            stdout, code = await git_diff(repo, path=path, since_origin_main=since_origin_main)
+            return {"stdout": stdout, "exit_code": code, "success": code == 0}
+
+        if name == "git.branch":
+            branch_name = tool_call.params.get("name")
+            create = tool_call.params.get("create", False)
+            stdout, code = await git_checkout_branch(branch_name, create=create)
             return {"stdout": stdout, "exit_code": code, "success": code == 0}
 
         if name == "git.run_tests":

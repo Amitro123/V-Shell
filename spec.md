@@ -23,14 +23,17 @@ v-shell (internally referred to as GitVoice) is a voice-controlled shell assista
 Supported commands include:
 - `git status`: Check repository status.
 - `git log`: View commit history.
-- `git diff`: Show changes.
+- `git diff`: Show changes with advanced filtering:
+    - Path filtering: `git.diff(path="app/main.py")`
+    - Compare against origin/main: `git.diff(since_origin_main=True)`
 - `git add .`: Stage all changes.
 - `git commit`: Commit changes with AI-generated or user-provided messages.
 - `git push`: Push commits to remote.
 - `git pull`: Pull changes from remote.
 - `git reset`: specific reset modes (soft, mixed, hard).
-- `git checkout`: Switch branches.
-- `git branch`: Create new branches.
+- `git branch`: Create or switch branches:
+    - Create new branch: `git.branch(name="feature", create=True)`
+    - Switch to existing branch: `git.branch(name="main", create=False)`
 - `smart commit`: Automatically stage, generate message (with user confirmation), commit, and push.
 - `run tests`: Run project tests (e.g., pytest).
 
@@ -46,7 +49,8 @@ Supported commands include:
 - **Tools Exposed**:
     - `git_status`: Returns status and exit code.
     - `run_tests`: Runs configured tests.
-    - `git_diff`: Returns diff for path.
+    - `git_diff`: Returns diff with optional path filtering and origin/main comparison.
+    - `git_branch`: Create or switch branches.
     - `smart_commit_push`: Auto-stage, commit, push (client handles confirmation).
     - `git_pull`: Pulls changes.
 - **Entry Point**: `app/mcp/server.py`
@@ -119,7 +123,7 @@ flowchart TD
         - `executor.py`: `execute_tool` dispatcher function.
         - `models.py`: Pydantic models (`ToolCall`, `AppConfig`).
         - `tools/`: Modular tool implementations.
-            - `git/`: `status.py`, `diff.py`, `pull.py`, `commit_push.py`, `test_runner.py`
+            - `git_ops/`: `status.py`, `diff.py`, `branch.py`, `pull.py`, `commit_push.py`, `test_runner.py`
             - `docker/`: Placeholder (`containers.py`)
             - `system/`: Placeholder (`shell.py`)
     - `audio/`: Audio recording and processing.

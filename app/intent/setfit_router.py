@@ -40,6 +40,16 @@ TRAIN_EXAMPLES = [
     ("what changed since last commit", "git.diff"),
     ("show git diff", "git.diff"),
     ("what did i change", "git.diff"),
+    ("what changed since origin main", "git.diff"),
+    ("show diff for app/main.py", "git.diff"),
+    ("diff against origin/main", "git.diff"),
+
+    # git_branch
+    ("create new branch feature/login", "git.branch"),
+    ("switch to develop branch", "git.branch"),
+    ("checkout main", "git.branch"),
+    ("new branch fix/bug-123", "git.branch"),
+    ("change branch to master", "git.branch"),
 
     # git_pull
     ("pull latest changes", "git.pull"),

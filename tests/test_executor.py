@@ -9,14 +9,18 @@ def mock_git_modules():
     with patch("app.core.executor.git_status") as mock_status, \
          patch("app.core.executor.smart_commit_push") as mock_commit, \
          patch("app.core.executor.get_repo") as mock_repo, \
-         patch("app.core.executor.run_tests") as mock_tests:
+         patch("app.core.executor.run_tests") as mock_tests, \
+         patch("app.core.executor.git_diff") as mock_diff, \
+         patch("app.core.executor.git_checkout_branch") as mock_branch:
         
         mock_repo.return_value = MagicMock()
         yield {
             "status": mock_status,
             "commit": mock_commit,
             "repo": mock_repo,
-            "tests": mock_tests
+            "tests": mock_tests,
+            "diff": mock_diff,
+            "branch": mock_branch
         }
 
 @pytest.fixture
@@ -51,6 +55,32 @@ async def test_execute_commit(mock_config, mock_git_modules):
     assert result["success"]
     assert result["stdout"] == "master 1234567"
     mock_git_modules["commit"].assert_called_once()
+
+@pytest.mark.asyncio
+async def test_execute_branch(mock_config, mock_git_modules):
+    mock_git_modules["branch"].return_value = ("Switched to branch new-feature", 0)
+    
+    tool_call = ToolCall(tool="git.branch", params={"name": "new-feature", "create": True})
+    result = await execute_tool(tool_call, config=mock_config)
+    
+    assert result["success"]
+    assert "Switched" in result["stdout"]
+    mock_git_modules["branch"].assert_called_with("new-feature", create=True)
+
+@pytest.mark.asyncio
+async def test_execute_diff(mock_config, mock_git_modules):
+    mock_git_modules["diff"].return_value = ("diff output", 0)
+    
+    tool_call = ToolCall(tool="git.diff", params={"path": "app/main.py", "since_origin_main": True})
+    result = await execute_tool(tool_call, config=mock_config)
+    
+    assert result["success"]
+    mock_git_modules["diff"].assert_called()
+    # verify args
+    args = mock_git_modules["diff"].call_args
+    # args[0] is positional (repo), args[1] is kwargs
+    assert args[1]["path"] == "app/main.py"
+    assert args[1]["since_origin_main"] is True
 
 @pytest.mark.asyncio
 async def test_execute_unknown_tool(mock_config, mock_git_modules):

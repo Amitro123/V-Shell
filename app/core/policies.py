@@ -18,4 +18,5 @@ TOOL_POLICIES: Dict[str, ToolPolicy] = {
     "git.reset": ToolPolicy(True, 0, []),
     "git.checkout_branch": ToolPolicy(True, 0, []),
     "git.create_branch": ToolPolicy(True, 0, []),
+    "git.branch": ToolPolicy(True, 0, []),
 }
