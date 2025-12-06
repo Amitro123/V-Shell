@@ -14,11 +14,12 @@
 
 - 🗣️ **Voice-Activated**: Manual "Press Enter to Start/Stop" flow for precise command capture.
 - 🧠 **Hybrid Intelligence**: Uses local **SetFit** models for instant reactions to common commands, falling back to LLMs for complex intent.
-- 🛡️ **Simplified Safety**: Dangerous commands (`push`, `smart_commit`) ask for a simple keyboard "Yes/No". No complex voice confirmations.
+- 🛡️ **Simplified Safety**: Dangerous commands (`push`, `smart_commit`, `reset`) ask for a simple keyboard "Yes/No". No complex voice confirmations.
 - ⚡ **Smart Commit**: Single command: "status -> stage -> generate message -> commit -> push".
 - 🔄 **Robustness**: Automatic retries for flaky commands and network issues.
 - 📊 **Metrics**: Tracks usage stats for improvement.
 - 🔌 **Model Agnostic**: Bring your own keys! Supports **Groq**, **Gemini**, **Ollama**, and **Faster-Whisper**.
+- 🔧 **Full Git Toolkit**: Complete set of Git operations including log, add, reset, branch management, and more.
 
 ## 🏗️ Architecture
 
@@ -33,8 +34,8 @@ flowchart TD
     Intent -- Low Conf --> Router["LLM Router\n(Brain)"]
     Router -->|ToolCall| Policy{"Tool Policy\n(Safety Gate)"}
     
-    Policy -->|Safe/Confirmed| Dispatcher["execute_tool\n(Dispatcher)"]
-    Policy -->|Unsafe/No Confirm| Cancel([Cancel])
+    Policy -->|Read-only OR\nUser Confirmed| Dispatcher["execute_tool\n(Dispatcher)"]
+    Policy -->|Requires Confirmation\nUser Declined| Cancel([Cancel])
     
     MCP -->|Direct Call| Dispatcher
     
@@ -50,6 +51,13 @@ flowchart TD
     MCP
     end
 ```
+
+**How the Safety Gate Works:**
+- **Read-only tools** (e.g., `git.status`, `git.diff`, `git.log`) → Execute immediately
+- **Write tools** (e.g., `git.push`, `git.commit`, `smart_commit_push`) → Prompt user for confirmation
+  - If user confirms → Execute
+  - If user declines → Cancel operation
+
 
 ## 🛠️ Tech Stack
 
@@ -112,7 +120,14 @@ Follow the on-screen prompts:
 
 **Try saying:**
 - *"Check the status"*
-- *"Stage all changes"*
+- *"Show me the log"* or *"Show commit history"*
+- *"Show me the diff"*
+- *"What changed since origin main"* (Compare against origin/main)
+- *"Show diff for app/main.py"* (Path-specific diff)
+- *"Create branch feature-login"* (Create and switch to new branch)
+- *"Switch to main"* (Switch to existing branch)
+- *"Stage all changes"* or *"Add all files"*
+- *"Reset last commit"* (Undo commits safely with confirmation)
 - *"Smart commit"* (Stages, generates message, confirms, commits, and pushes)
 - *"Run tests"*
 - *"Pull from origin"*
@@ -128,7 +143,7 @@ v-shell/
 │   │   ├── executor.py     # execute_tool dispatcher
 │   │   ├── models.py       # ToolCall, AppConfig
 │   │   └── tools/          # Modular tool implementations
-│   │       ├── git/        # status, diff, pull, commit_push
+│   │       ├── git_ops/    # status, diff, branch, pull, commit_push
 │   │       ├── docker/     # (placeholder)
 │   │       └── system/     # (placeholder)
 │   ├── llm/            # 🧠 LLM routing & intelligence
@@ -166,4 +181,4 @@ GitVoice includes an MCP server that you can connect to IDEs like **Claude Deskt
 }
 ```
 
-Available tools: `git_status`, `run_tests`, `git_diff`, `smart_commit_push`, `git_pull`.
+Available tools: `git_status`, `git_log`, `git_add_all`, `git_reset`, `run_tests`, `git_diff`, `git_branch`, `smart_commit_push`, `git_pull`.

@@ -1,65 +1,52 @@
 # Code Review: v-shell (GitVoice)
 
-**Date:** 2024-05-22
+**Date:** 2025-02-18
 **Reviewer:** Jules (AI Software Engineer)
 **Scope:** Architecture, Code Quality, Security, and Testing.
 
 ## 1. Executive Summary
 
-v-shell (GitVoice) is a promising voice-controlled Git assistant with a solid architectural foundation. It successfully combines local intent classification (SetFit) with LLM fallback (Groq/Gemini) and local execution (GitPython).
+v-shell (GitVoice) has evolved into a functional voice-controlled Git assistant. The core architecture (Audio -> STT -> Brain -> Tool Execution) is sound. Recent updates have improved safety (confirmation steps for smart commits), dependency management, and test coverage.
 
-However, there are critical discrepancies between the documentation and implementation, particularly regarding safety confirmation flows ("smart commit"). Test coverage for the "Brain" (LLM/Routing) component is currently missing.
+## 2. Resolved Issues (vs Previous Review/Roadmap)
 
-## 2. Architecture & Design
+- **Smart Commit Safety**: The `smart_commit_push` tool now accepts a `confirm_callback`. `main.py` implements this callback to ask the user for confirmation *after* the commit message is generated but *before* committing.
+- **Audio Recording**: The "Press Enter to Start/Stop" flow is correctly implemented, replacing the rigid fixed-duration recording.
+- **Dependencies**: `requirements.txt` and `pyproject.toml` are now aligned. `openwakeword` was removed to fix installation issues (it was unused).
+- **Tool Naming**: Fixed inconsistencies between policy definition (underscore) and router/executor (dot notation).
+- **Module Conflicts**: Renamed `app/core/tools/git` to `app/core/tools/git_ops` to avoid conflicts with `gitpython`'s `git` module.
+- **Test Coverage**: Added robust tests for Executor, Router, MCP, and Smart Commit logic. All tests pass.
+
+## 3. Architecture & Design Analysis
 
 ### Strengths
-- **Hybrid Intelligence**: The use of SetFit for fast, local intent classification with LLM fallback is a robust design pattern that balances latency and capability.
-- **Modular Design**: Clear separation of concerns between `audio`, `core` (execution), and `llm` (intelligence).
-- **Extensible Policies**: `ToolPolicy` allows fine-grained control over retries and confirmation requirements.
+- **Manual Trigger**: The manual start/stop recording is reliable and simple.
+- **Hybrid Intelligence**: Retained SetFit + LLM fallback.
+- **Safety**: `smart_commit_push` now correctly checks for confirmation.
 
-### Weaknesses
-- **Synchronous Audio Recording**: The current `AudioRecorder` blocks for a fixed duration (`record_once`). This leads to poor UX (dead air or cut-off commands). A Voice Activity Detection (VAD) or streaming approach is needed.
-- **Dependency Heaviness**: The requirement for `setfit`, `faster-whisper`, and `torch` makes the installation heavy. These should ideally be optional or lazily loaded (which is partially implemented).
+### Remaining Weaknesses / Risks
+- **"Smart" Staging Logic**: `smart_commit_push` now uses `git add -A` (via `auto_stage=True`) which stages *everything* (new, modified, deleted). This is powerful but risky if the user has untracked files they didn't intend to commit (e.g., secrets, temp files). Users *must* rely on `.gitignore`.
+- **Hardcoded Models**: `AppConfig` in `app/core/models.py` has default model names (e.g., `llama-3.1-8b-instant`). As models evolve rapidly, these should be externalized to a config file.
+- **Blocking Operations**: Some Git operations (like `pull` or large `diff`) are synchronous and might block the main loop, though `execute_tool` is async, the underlying `gitpython` calls are sync.
 
-## 3. Implementation vs. Specification
+## 4. Recommendations & Roadmap
 
-### Discrepancies
-1.  **Smart Commit Confirmation**:
-    - **Spec/README**: States "stage -> generate message -> **confirm** -> commit -> push".
-    - **Implementation**: The `_smart_commit_push` method in `executor.py` generates the message and immediately commits/pushes without an intermediate confirmation of the *message text*. The user only confirms the *intent* to run the tool beforehand.
-    - **Risk**: Users might push commits with hallucinated or incorrect messages.
+### Short Term
+1.  **Configuration Externalization**:
+    - Move default model names and other constants to a user-editable configuration file (e.g., `~/.gitvoice/config.yaml` or `.env` defaults).
+2.  **Integration Tests**:
+    - Create tests that use a real temporary Git repository (via `pytest` `tmp_path`) to verify that `git_ops` actually modify the repo state as expected, rather than just asserting that mocks were called.
 
-2.  **Wake Word**:
-    - **Spec**: Mentioned as "Planned/In-progress".
-    - **Implementation**: Not implemented. `AudioRecorder` is manual trigger only.
+### Medium Term
+3.  **Docker & System Tools**:
+    - Implement the placeholder `docker` and `system` tools to expand capabilities beyond Git.
+4.  **Wake Word (Re-visit)**:
+    - Re-integrate `openwakeword` or a similar lightweight wake word engine once dependency conflicts (specifically `tflite-runtime`) are resolved.
 
-3.  **Missing Dependencies**:
-    - `requirements.txt` is missing `setfit` and `datasets`, which are required for the `SetFitIntentClassifier` used in `app/intent/setfit_router.py`.
+### Long Term
+5.  **Context-Aware Undo**:
+    - Implement a "undo last action" feature that understands the git reflog.
 
-## 4. Code Quality & Safety
+## 5. Conclusion
 
-### Safety Mechanisms
-- **Confirmation**: `ToolPolicy` correctly flags destructive actions (`push`, `reset`).
-- **Heuristics**: `Brain._process_llm` includes a safety override to force confirmation if dangerous keywords are detected, which is a good fail-safe.
-- **Validation**: Pydantic models ensure structured data handling.
-
-### Improvements Needed
-- **Type Safety in Router**: The `SetFit` classifier returns string labels. If these don't exactly match `GitTool` enum values, `ToolCall` validation might fail or behavior might be undefined.
-- **Error Handling**: `GitExecutor` generally handles errors well, but the `smart_commit` flow is a complex multi-step process that could leave the repo in an intermediate state (e.g., staged but not committed) if it fails halfway.
-
-## 5. Testing
-
-- **Current Status**:
-    - `tests/test_executor.py` and `tests/test_smart_commit.py` pass and cover the execution logic using mocks.
-    - `tests/test_router.py` is **empty**.
-- **Gaps**:
-    - No tests for `Brain` / `Router` logic.
-    - No integration tests with actual Git repositories.
-    - No tests for the audio pipeline.
-
-## 6. Recommendations
-
-1.  **Fix Smart Commit Flow**: Refactor `_smart_commit_push` to return the generated message to `main.py` for user confirmation *before* committing.
-2.  **Add Router Tests**: Implement unit tests for `Brain` using mocked LLM responses.
-3.  **Update Dependencies**: Add missing libraries to `requirements.txt`.
-4.  **Improve Recorder**: Implement a "press-to-stop" or VAD-based recording mechanism.
+The project is in a good state for usage. The critical safety and stability issues have been addressed. The focus should now shift to extensibility (config) and robustness (integration tests).

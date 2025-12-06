@@ -13,14 +13,13 @@ You must return a SINGLE JSON object matching the ToolCall schema. Do not return
 Available tools:
 - git.status: Check status
 - git.log: Show commit history (params: n [default 5])
-- git.diff: Show changes (params: path [optional])
+- git.diff: Show changes (params: path [optional], since_origin_main [boolean])
 - git.add_all: Stage all changes
 - git.commit: Commit changes (params: message [required])
 - git.push: Push to remote (params: remote [default origin], branch [optional])
 - git.pull: Pull from remote (params: remote [default origin], branch [optional])
 - git.reset: Reset changes (params: mode [soft, mixed, hard], commits [default 1])
-- git.checkout_branch: Switch branch (params: branch [required])
-- git.create_branch: Create and switch to branch (params: branch [required])
+- git.branch: Create or switch branches (params: name [required], create [boolean, default false])
 - git.run_tests: Run the project's test suite
 - git.smart_commit_push: Automatically stage, commit (with generated message), and push
 - help: If the intent is unclear or not git related
@@ -29,6 +28,9 @@ Rules:
 - For "commit", if no message is provided, generate a concise one based on context or use "Update".
 - For "undo", usually means git.reset (soft by default).
 - For "show me changes", use git.diff.
+- For "what changed since origin/main", use git.diff with since_origin_main=true.
+- For "switch branch" or "checkout", use git.branch (create=false).
+- For "create branch" or "new branch", use git.branch (create=true).
 - For "what did I do", use git.status or git.log.
 - For "run tests" or "test my code", use git.run_tests.
 - For "smart commit" or "commit and push", use git.smart_commit_push.
@@ -42,6 +44,7 @@ Robustness Rules:
 - Ignore polite fillers like "please", "could you", "would you".
 - "get push" -> git.push
 - "gate status" -> git.status
+- "change branch" -> git.branch
 
 Output JSON format:
 {
@@ -114,7 +117,12 @@ class Brain:
             
             if confidence >= 0.6 and label != "help":
                 confirm = label in ["git.smart_commit_push", "git.pull", "git.push", "git.commit", "git.reset"]
-                return ToolCall(tool=label, params={}, confirmation_required=confirm)
+                tool_call = ToolCall(tool=label, params={}, confirmation_required=confirm)
+                
+                # Heuristic parameter extraction for branch name if missing
+                tool_call = self._ensure_branch_params(tool_call, text)
+                
+                return tool_call
         except Exception as e:
             logger.warning(f"SetFit classification failed (falling back to LLM): {e}")
 
@@ -204,3 +212,21 @@ class Brain:
             logger.error(f"Failed to generate commit message: {e}")
             
         return "Update"
+
+    def _ensure_branch_params(self, tool_call: ToolCall, raw_text: str) -> ToolCall:
+        if tool_call.tool != "git.branch":
+            return tool_call
+
+        name = tool_call.params.get("name")
+        if not name:
+            t = raw_text.lower()
+            if "main" in t:
+                name = "main"
+            elif "master" in t:
+                name = "master"
+            # Add more heuristics if needed
+
+        if name:
+            tool_call.params["name"] = name
+            
+        return tool_call

@@ -97,5 +97,38 @@ async def test_deterministic_guard_compound_command(brain):
     assert result.tool == "git.smart_commit_push"
     assert result.params.get("auto_stage") is True
     assert result.params.get("push") is True
+    assert result.params.get("push") is True
     assert result.confirmation_required is True
+
+@pytest.mark.asyncio
+async def test_process_branch_extraction(brain):
+    # Test that "switch to main" extracts name="main"
+    with patch("app.intent.setfit_router.SetFitIntentClassifier") as mock_cls:
+        classifier_instance = Mock()
+        classifier_instance.predict_intent.return_value = ("git.branch", 0.9)
+        brain._classifier = classifier_instance
+        
+        result = await brain.process("switch to main")
+        
+        assert result.tool == "git.branch"
+        assert result.params["name"] == "main"
+
+@pytest.mark.asyncio
+async def test_ensure_branch_params_heuristics(brain):
+    # Direct test of the heuristic method
+    
+    # "main" keyword
+    call1 = ToolCall(tool="git.branch", params={})
+    updated = brain._ensure_branch_params(call1, "switch to main")
+    assert updated.params["name"] == "main"
+    
+    # "master" keyword
+    call2 = ToolCall(tool="git.branch", params={})
+    updated = brain._ensure_branch_params(call2, "checkout master")
+    assert updated.params["name"] == "master"
+    
+    # No keyword
+    call3 = ToolCall(tool="git.branch", params={})
+    updated = brain._ensure_branch_params(call3, "create branch")
+    assert "name" not in updated.params
 
