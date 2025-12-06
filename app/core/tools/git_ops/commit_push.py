@@ -62,18 +62,21 @@ async def smart_commit_push(
         # 2. Add (if needed)
         # Check staged changes
         diff_cached = repo.git.diff("--staged")
-        if not diff_cached and auto_stage:
-            repo.git.add("-u") # Stage modified/deleted
-            # Check again after adding
+
+        # If auto_stage is requested, we generally want to capture ALL changes
+        # (modified, deleted, untracked) to ensure the commit reflects the current state.
+        # However, we only do this if there are no staged changes OR if we want to ensure everything is included.
+        # The previous logic only triggered if nothing was staged.
+        # But if the user staged one file but forgot another, smart commit should probably stage the rest?
+        # For safety/predictability, if the user MANUALLY staged something, we might respect that and NOT auto-stage others?
+        # But "smart commit" usually implies "do it all".
+        # Let's stick to: if nothing staged, stage everything. If something staged, assume user knows what they are doing?
+        # OR: always stage everything if auto_stage=True.
+        # Let's assume auto_stage=True means "Stage all changes".
+
+        if auto_stage:
+            repo.git.add("-A") # Stages all changes (modified, deleted, untracked)
             diff_cached = repo.git.diff("--staged")
-            # If still empty, try adding untracked files too if desired, 
-            # but -u is safer. Let's stick to -u or "." based on user preference?
-            # User request said "git add" explicitly usually implies ".", but let's stick to -u for safety unless implied otherwise.
-            # Actually, standard logic often is "add -A" for "add everything".
-            # Let's keep existing logic: if auto_stage, ensure we have something.
-            if not diff_cached:
-                repo.git.add(".") # Last resort catch-all
-                diff_cached = repo.git.diff("--staged")
 
         if not diff_cached:
             return "", "No changes to commit.", 1

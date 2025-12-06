@@ -2,11 +2,11 @@ import logging
 import git
 from rich.console import Console
 from app.core.models import ToolCall, AppConfig
-from app.core.tools.git.status import git_status
-from app.core.tools.git.diff import git_diff
-from app.core.tools.git.test_runner import run_tests
-from app.core.tools.git.commit_push import smart_commit_push
-from app.core.tools.git.pull import git_pull
+from app.core.tools.git_ops.status import git_status
+from app.core.tools.git_ops.diff import git_diff
+from app.core.tools.git_ops.test_runner import run_tests
+from app.core.tools.git_ops.commit_push import smart_commit_push
+from app.core.tools.git_ops.pull import git_pull
 
 logger = logging.getLogger(__name__)
 
