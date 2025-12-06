@@ -1,17 +1,14 @@
-import git
 from typing import Tuple, Optional
+from .utils import run_git
 
-async def git_pull(repo: git.Repo, remote: str = "origin", branch: Optional[str] = None) -> Tuple[str, int]:
+async def git_pull(repo=None, remote: Optional[str] = None, branch: Optional[str] = None) -> Tuple[str, int]:
     """
-    Run `git pull`.
-    Returns (stdout, exit_code).
+    Run `git pull` (optionally remote/branch).
     """
-    try:
-        if not branch:
-            branch = repo.active_branch.name
-        output = repo.git.pull(remote, branch)
-        return output, 0
-    except git.GitCommandError as e:
-        return str(e), e.status
-    except Exception as e:
-        return str(e), 1
+    # Note: 'repo' argument kept for signature compatibility during transition if needed, but unused.
+    args = ["pull"]
+    if remote:
+        args.append(remote)
+    if branch:
+        args.append(branch)
+    return await run_git(args)

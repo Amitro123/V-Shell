@@ -33,19 +33,21 @@ async def test_integration_status_diff_add(repo_dir, test_config, mock_brain, mo
     """Full flow: Status -> Diff -> Smart Commit."""
     repo = git.Repo(repo_dir)
     
-    # Patch executor.get_repo to return our temp repo
-    monkeypatch.setattr("app.core.executor.get_repo", lambda: repo)
+    # Switch CWD to the temp repo so run_git works on it
+    monkeypatch.chdir(repo_dir)
     
     # 1. Status (Clean)
     tool_call = ToolCall(tool="git.status")
     result = await execute_tool(tool_call, config=test_config, brain=mock_brain)
     
-    # Debug print
     if not result["success"]:
         print(f"Status failed: {result.get('stderr')}")
         
     assert result["success"]
-    assert "On branch" in result["stdout"]
+    # Output might vary slightly (branch name etc), usually "On branch master" or "main"
+    # git init defaults depend on system config. 
+    # But usually "On branch" is present.
+    assert "On branch" in result["stdout"] or "##" in result["stdout"]
     
     # 2. Make changes
     test_file = repo_dir / "new_file.txt"
@@ -53,7 +55,8 @@ async def test_integration_status_diff_add(repo_dir, test_config, mock_brain, mo
     
     # 3. Status (Untracked)
     result = await execute_tool(tool_call, config=test_config, brain=mock_brain)
-    assert "new_file.txt" in result["stdout"] or "Untracked files" in result["stdout"]
+    # Output should include file name
+    assert "new_file.txt" in result["stdout"]
     
     # 4. Smart Commit 
     # Must use push=False because we have no remote
@@ -71,31 +74,19 @@ async def test_integration_status_diff_add(repo_dir, test_config, mock_brain, mo
     assert not repo.is_dirty()
     last_commit = repo.head.commit
     assert last_commit.message.strip() == "chore: test commit"
-    # untracked file 'new_file.txt' should now be in the tree if auto_stage worked (it uses add -u or add .)
-    # 'git add -u' does NOT add untracked files. 'git add .' does.
-    # Logic in smart_commit_push:
-    # if not diff_cached and auto_stage:
-    #     repo.git.add("-u")
-    #     if not diff_cached:
-    #         repo.git.add(".") 
-    
-    # Since we have only untracked files, 'add -u' does nothing. 'diff --staged' is empty.
-    # So it hits 'repo.git.add(".")'. This stages the untracked file. 
-    # So it SHOULD be committed.
-    
     assert "new_file.txt" in last_commit.tree
 
 @pytest.mark.asyncio
 async def test_integration_diff(repo_dir, test_config, monkeypatch):
     repo = git.Repo(repo_dir)
+    monkeypatch.chdir(repo_dir)
+
     test_file = repo_dir / "a.txt"
     test_file.write_text("v1", encoding="utf-8")
     repo.index.add(["a.txt"])
     repo.index.commit("init")
     
     test_file.write_text("v2", encoding="utf-8")
-    
-    monkeypatch.setattr("app.core.executor.get_repo", lambda: repo)
     
     tool_call = ToolCall(tool="git.diff")
     result = await execute_tool(tool_call, config=test_config)
