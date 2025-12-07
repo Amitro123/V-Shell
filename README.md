@@ -151,7 +151,7 @@ Follow the on-screen prompts:
 
 ## 📂 Project Structure
 
-```
+```text
 v-shell/
 ├── app/
 │   ├── audio/          # 🎧 Audio recording & STT
