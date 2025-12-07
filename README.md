@@ -169,6 +169,14 @@ v-shell/
 └── ...
 ```
 
+## 👩‍💻 Developer commands
+
+- `make dev` (or `python tasks.py dev`) – Run the voice CLI.
+- `make mcp` (or `python tasks.py mcp`) – Start the MCP server.
+- `make test` (or `python tasks.py test`) – Run the full test suite.
+- `make lint` – Lint the codebase.
+- `make format` – Format the code.
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
