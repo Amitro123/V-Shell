@@ -1,4 +1,4 @@
-import subprocess
+import asyncio
 import logging
 from typing import List, Tuple
 
@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 async def run_git(args: List[str]) -> Tuple[str, int]:
     """
-    Run a git command with the given arguments.
+    Run a git command with the given arguments asynchronously.
 
     Returns:
         stdout_or_stderr: str
@@ -14,26 +14,30 @@ async def run_git(args: List[str]) -> Tuple[str, int]:
     """
     cmd = ["git", *args]
     logger.info("Running git command: %s", " ".join(cmd))
-    # We use subprocess.run (synchronous) here but wrap it if needed or assume it's fast enough.
-    # The user prompt example used synchronous subprocess.run inside an async def.
-    # In a real async app we might want asyncio.create_subprocess_exec, but I will stick to the user's provided snippet
-    # which uses subprocess.run.
+    
     try:
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",      # force utf-8
-            errors="replace",      # avoid UnicodeDecodeError
+        # Create subprocess
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
         )
         
-        stdout = (proc.stdout or "") + (proc.stderr or "")
-        stdout = stdout.strip()
+        # Wait for completion and capture output
+        stdout_bytes, stderr_bytes = await proc.communicate()
+        
+        # Decode output robustly
+        stdout_str = stdout_bytes.decode("utf-8", errors="replace")
+        stderr_str = stderr_bytes.decode("utf-8", errors="replace")
+        
+        # Combine stdout and stderr (mimicking previous behavior)
+        output = (stdout_str + stderr_str).strip()
 
         if proc.returncode != 0:
-            logger.error(f"Git command failed with code {proc.returncode}: {stdout}")
+            logger.error(f"Git command failed with code {proc.returncode}: {output}")
 
-        return stdout, proc.returncode
+        return output, proc.returncode
+
     except FileNotFoundError:
         logger.error("git command not found")
         return "git command not found", 127

@@ -45,11 +45,6 @@ TOOL_REGISTRY: Dict[str, ToolFunc] = {
     "git.merge": git_merge,
 }
 
-# Simple tools config
-SIMPLE_GIT_TOOLS: Dict[str, list[str]] = {
-    "git.fetch": ["fetch"],
-}
-
 async def execute_tool(tool_call: ToolCall, config: AppConfig = None, brain=None, console=None, _registry: Dict[str, ToolFunc] = None) -> dict:
     """
     Dispatch ToolCall via TOOL_REGISTRY.
@@ -60,19 +55,7 @@ async def execute_tool(tool_call: ToolCall, config: AppConfig = None, brain=None
     logger.info(f"Executing tool: {name} with params: {params}")
 
     try:
-        # 1. Check SIMPLE_GIT_TOOLS
-        if name in SIMPLE_GIT_TOOLS:
-            from app.core.tools.git_ops.utils import run_git
-            extra_args = params.get("extra_args", [])
-            # If params has other keys that are list of strings, maybe append them? 
-            # But usually params for simple tools might be just extra arguments.
-            # For safety, let's just stick to what the user prompt suggested or basic list.
-            # The prompt example: `extra_args = params.get("extra_args", [])`
-            cmd = SIMPLE_GIT_TOOLS[name] + list(extra_args)
-            stdout, code = await run_git(cmd)
-            return {"stdout": stdout, "exit_code": code, "success": code == 0}
-
-        # 2. Check TOOL_REGISTRY
+        # 1. Check TOOL_REGISTRY (Unified dispatch)
         registry = _registry if _registry is not None else TOOL_REGISTRY
         func = registry.get(name)
         if func is None:

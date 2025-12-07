@@ -3,6 +3,8 @@ import logging
 from typing import Tuple, Any, Optional
 from .utils import run_git
 
+import re
+
 logger = logging.getLogger(__name__)
 
 async def generate_commit_message_with_timeout(brain: Any, diff: str, timeout: float = 5.0) -> str:
@@ -28,10 +30,25 @@ async def generate_commit_message_with_timeout(brain: Any, diff: str, timeout: f
         logger.info("Commit message ready.")
         return msg
     except asyncio.TimeoutError:
-        logger.warning("LLM timed out while generating commit message. Falling back to generic message.")
+        logger.warning("LLM timed out while generating commit message. Falling back to heuristic message.")
     except Exception as e:
         logger.error(f"LLM failed while generating commit message: {e}")
 
+    # Fallback heuristic: parse file names from diff
+    try:
+        # Regex to find 'diff --git a/path b/path'
+        # We capture the b path (destination)
+        files = re.findall(r"diff --git a/.* b/(.*)", diff)
+        if files:
+            # Take top 3 unique files to avoid huge messages
+            unique_files = list(dict.fromkeys(files))[:3]
+            file_list = ", ".join(unique_files)
+            if len(files) > 3:
+                file_list += ", ..."
+            return f"chore: update {file_list}"
+    except Exception:
+        pass
+        
     return "chore: update project files"
 
 async def smart_commit_push(

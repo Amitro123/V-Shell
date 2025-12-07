@@ -13,16 +13,26 @@ def mock_tools():
     mock_log = AsyncMock()
     mock_add = AsyncMock()
     mock_reset = AsyncMock()
+    mock_fetch = AsyncMock()
+    mock_push = AsyncMock()
+    mock_commit = AsyncMock()
+    mock_revert = AsyncMock()
+    mock_merge = AsyncMock()
     
     return {
         "git.status": mock_status,
-        "git.smart_commit_push": mock_commit,
+        "git.smart_commit_push": mock_commit, # Note: reuse mock_commit name or fix naming. Fixture used 'mock_commit' for smart_commit_push above?
         "git.run_tests": mock_tests,
         "git.diff": mock_diff,
         "git.branch": mock_branch,
         "git.log": mock_log,
         "git.add_all": mock_add,
-        "git.reset": mock_reset
+        "git.reset": mock_reset,
+        "git.fetch": mock_fetch,
+        "git.push": mock_push,
+        "git.commit": mock_commit,
+        "git.revert": mock_revert,
+        "git.merge": mock_merge
     }
 
 @pytest.fixture
@@ -96,18 +106,23 @@ async def test_execute_unknown_tool(mock_config, mock_tools):
     assert "Unknown tool" in result["stderr"]
 
 @pytest.mark.asyncio
-async def test_execute_simple_tool(mock_config):
-    # Test SIMPLE_GIT_TOOLS like git.fetch
-    with patch("app.core.tools.git_ops.utils.run_git", new_callable=AsyncMock) as mock_run_git:
-        mock_run_git.return_value = ("fetch output", 0)
-        
-        tool_call = ToolCall(tool="git.fetch", params={"extra_args": ["--all"]})
-        result = await execute_tool(tool_call, config=mock_config)
-        
-        assert result["success"]
-        assert result["stdout"] == "fetch output"
-        # Check that it combined default args ["fetch"] with extra args ["--all"]
-        mock_run_git.assert_called_once_with(["fetch", "--all"])
+async def test_execute_simple_tool(mock_config, mock_tools):
+    # Test git.fetch via registry (formerly SIMPLE_GIT_TOOLS)
+    mock_tools["git.fetch"].return_value = ("fetch output", 0)
+    
+    # We need to manually register mock because execute_tool uses default registry if not provided, 
+    # but here we pass _registry=mock_tools
+    tool_call = ToolCall(tool="git.fetch", params={"extra_args": ["--all"]})
+    result = await execute_tool(tool_call, config=mock_config, _registry=mock_tools)
+    
+    assert result["success"]
+    assert result["stdout"] == "fetch output"
+    
+    # Check that git.fetch was called with correct params
+    # Note: git_fetch(remote=None, extra_args=['--all'])
+    mock_tools["git.fetch"].assert_called_once()
+    kwargs = mock_tools["git.fetch"].call_args.kwargs
+    assert kwargs.get("extra_args") == ["--all"]
 
 @pytest.mark.asyncio
 async def test_execute_branch_missing_name(mock_config, mock_tools):
