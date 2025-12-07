@@ -9,7 +9,7 @@ from app.core.tools.git_ops.status import git_status
 from app.core.tools.git_ops.diff import git_diff
 from app.core.tools.git_ops.pull import git_pull
 from app.core.tools.git_ops.test_runner import run_tests  
-from app.core.tools.git_ops.commit_push import smart_commit_push
+from app.core.tools.git_ops.commit_push import smart_commit_push, git_commit, git_push
 from app.core.tools.git_ops.branch import git_checkout_branch
 from app.core.tools.git_ops.log import git_log
 from app.core.tools.git_ops.add import git_add_all
@@ -26,6 +26,8 @@ TOOL_REGISTRY: Dict[str, ToolFunc] = {
     "git.pull": git_pull,
     "git.run_tests": run_tests,
     "git.smart_commit_push": smart_commit_push,
+    "git.commit": git_commit,
+    "git.push": git_push,
     "git.branch": git_checkout_branch,
     "git.log": git_log,
     "git.add_all": git_add_all,
@@ -87,6 +89,11 @@ async def execute_tool(tool_call: ToolCall, config: AppConfig = None, brain=None
             branch_name = params.get("name")
             if not branch_name:
                  return {"stdout": "", "stderr": "git.branch requires a 'name' parameter", "exit_code": 1, "success": False}
+
+        if name == "git.reset":
+            # Map 'commits' (from LLM) to 'steps' (impl)
+            if "commits" in params:
+                call_params["steps"] = params.pop("commits")
 
         if name == "git.run_tests":
              result = await func(**call_params)

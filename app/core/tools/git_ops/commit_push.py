@@ -115,3 +115,20 @@ async def smart_commit_push(
     except Exception as e:
         logger.exception("Smart commit failed")
         return "", str(e), 1
+
+async def git_commit(message: str) -> Tuple[str, int]:
+    """
+    Commit changes with a specific message.
+    """
+    if not message:
+         return "Commit message is required.", 1
+    return await run_git(["commit", "-m", message])
+
+async def git_push(remote: str = "origin", branch: str = "") -> Tuple[str, int]:
+    """
+    Push changes to remote.
+    """
+    args = ["push", remote]
+    if branch:
+        args.append(branch)
+    return await run_git(args)

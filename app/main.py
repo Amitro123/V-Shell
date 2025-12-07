@@ -52,7 +52,7 @@ async def main():
         policy = TOOL_POLICIES.get(tool_call.tool, ToolPolicy(False, 0, []))
         
         # 1. Human Confirmation
-        if policy.confirmation_required and config.require_confirmation_writes:
+        if (policy.confirmation_required or tool_call.confirmation_required) and config.require_confirmation_writes:
             console.print(f"[bold yellow]Safety Check:[/bold yellow] About to execute: {tool_call.tool} ({tool_call.params})")
             if not Confirm.ask(f"[bold red]Are you sure?[/bold red]"):
                 console.print("[red]Cancelled by user.[/red]")
