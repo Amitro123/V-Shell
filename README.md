@@ -27,29 +27,38 @@
 ```mermaid
 flowchart TD
     User([User]) -->|Voice Command| Audio[Audio Input]
+    User -->|Keyboard Input| CLI["CLI UI\n(Rich & Async Spinners)"]
     External([External Clients\nIDEs/Agents]) -->|MCP Tools| MCP["MCP Server\n(FastMCP)"]
     
     Audio -->|WAV| STT["STT Engine\n(Faster-Whisper)"]
     STT -->|Text| Intent["Intent Classifier\n(SetFit)"]
     Intent -- High Conf --> Policy
-    Intent -- Low Conf --> Router["LLM Router\n(Brain)"]
+    Intent -- Low Conf --> Router["LLM Router\n(Groq/Gemini)\n(Brain)"]
+    
     Router -->|ToolCall| Policy{"Tool Policy\n(Safety Gate)"}
     
-    Policy -->|Read-only OR\nUser Confirmed| Dispatcher["execute_tool\n(Dispatcher)"]
-    Policy -->|Requires Confirmation\nUser Declined| Cancel([Cancel])
+    Policy -->|Safe / Confirmed| Dispatcher["execute_tool\n(Dispatcher)"]
+    Policy -->|Unsafe / Declined| CLI
     
     MCP -->|Direct Call| Dispatcher
     
-    Dispatcher -->|git.*| GitTools[Git Tools]
+    Dispatcher -->|git.*| GitTools["Git Operations\n(Async Subprocess)"]
+    
     GitTools -->|Execute| Git[(Git Repository)]
     Git -->|Result| Dispatcher
-    Dispatcher -->|CLI Output| User
+    
+    Dispatcher -->|Formatted Output| CLI
+    CLI -->|Visual Feedback| User
     
     subgraph Core Logic
     Router
     Policy
     Dispatcher
     MCP
+    end
+    
+    subgraph Tools
+    GitTools
     end
 ```
 
