@@ -112,11 +112,9 @@ async def execute_tool(tool_call: ToolCall, config: AppConfig = None, brain=None
                 call_params["limit"] = params.pop("n")
 
         if name == "git.run_tests":
-             result = await func(**call_params)
-             # Result is (stdout, exit_code)
-             stdout, code = result
-             summary = "All tests passed" if code == 0 else "Tests failed"
-             return {"stdout": stdout, "exit_code": code, "success": code == 0, "summary": summary}
+             # run_tests now returns a dict with summary, so pass it through
+             # validation logic for success is inside execute_tool return handling
+             pass
 
         # Execute
         result = await func(**call_params)

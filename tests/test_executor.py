@@ -148,7 +148,12 @@ async def test_execute_reset(mock_config, mock_tools):
     
 @pytest.mark.asyncio
 async def test_execute_run_tests_summary(mock_config, mock_tools):
-    mock_tools["git.run_tests"].return_value = ("output", 0)
+    # run_tests now returns a dict
+    mock_tools["git.run_tests"].return_value = {
+        "stdout": "output", 
+        "exit_code": 0, 
+        "summary": "All tests passed"
+    }
 
     tool_call = ToolCall(tool="git.run_tests")
     result = await execute_tool(tool_call, config=mock_config, _registry=mock_tools)
@@ -156,6 +161,10 @@ async def test_execute_run_tests_summary(mock_config, mock_tools):
     assert result["summary"] == "All tests passed"
     
     # Fail case
-    mock_tools["git.run_tests"].return_value = ("fail", 1)
+    mock_tools["git.run_tests"].return_value = {
+        "stdout": "fail", 
+        "exit_code": 1, 
+        "summary": "Tests failed"
+    }
     result = await execute_tool(tool_call, config=mock_config, _registry=mock_tools)
     assert result["summary"] == "Tests failed"

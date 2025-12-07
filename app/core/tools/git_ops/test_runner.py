@@ -1,13 +1,17 @@
-from typing import Tuple, Optional
+from typing import Dict, Optional
 import subprocess
 import sys
 
-async def run_tests(command: Optional[str] = None) -> Tuple[str, int]:
+async def run_tests(command: Optional[str] = None) -> Dict[str, object]:
     """
     Run tests using the configured command (e.g. 'pytest').
 
     Returns:
-        stdout_or_stderr, exit_code
+        {
+            "stdout": full text output,
+            "exit_code": int,
+            "summary": short human-readable summary
+        }
     """
     if command:
         cmd = command.split()
@@ -23,7 +27,20 @@ async def run_tests(command: Optional[str] = None) -> Tuple[str, int]:
         stdout = proc.stdout
         if proc.stderr:
             stdout += "\n" + proc.stderr
-        return stdout, proc.returncode
+        
+        exit_code = proc.returncode
+        summary = "All tests passed." if exit_code == 0 else f"Tests failed (exit code {exit_code})."
+        
+        return {
+            "stdout": stdout,
+            "exit_code": exit_code,
+            "summary": summary
+        }
     except Exception as e:
-        return str(e), 1
+        return {
+            "stdout": str(e),
+            "exit_code": 1,
+            "summary": f"Execution failed: {str(e)}"
+        }
+
 

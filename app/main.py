@@ -115,8 +115,17 @@ async def main():
                     elif tool == "git.diff":
                         render_git_diff(stdout)
                     elif tool == "git.run_tests":
-                        summary = result_dict.get("summary", "Test run finished")
-                        render_test_results(summary, stdout)
+                        # For run_tests, we render inside here regardless of success/failure
+                        # because passing tests (exit 0) vs failed tests (exit 1) are both "successful" tool executions
+                        render_test_results(result_dict)
+                        
+                        # We override the success message logic for tests
+                        exit_code = result_dict.get("exit_code", 0)
+                        if exit_code == 0:
+                            show_success(f"✓ {tool} passed all tests")
+                        else:
+                            show_error(f"Tests failed with exit code {exit_code}")
+                        return
                     elif tool == "git.smart_commit_push":
                         render_smart_commit(result_dict)
                     else:
@@ -131,7 +140,7 @@ async def main():
                     await asyncio.sleep(0.5)
                     continue
                 
-                # Final failure
+                # Final failure for non-test tools
                 show_error(f"{tool_call.tool} failed with exit code {exit_code}")
                 if stderr:
                     render_simple_block("Error Details", stderr, border_style="red")

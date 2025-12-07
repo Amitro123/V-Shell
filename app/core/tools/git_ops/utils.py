@@ -19,12 +19,23 @@ async def run_git(args: List[str]) -> Tuple[str, int]:
     # In a real async app we might want asyncio.create_subprocess_exec, but I will stick to the user's provided snippet
     # which uses subprocess.run.
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True)
-        stdout = proc.stdout
-        if proc.stderr:
-            stdout += "\n" + proc.stderr
-        return stdout.strip(), proc.returncode
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",      # force utf-8
+            errors="replace",      # avoid UnicodeDecodeError
+        )
+        
+        stdout = (proc.stdout or "") + (proc.stderr or "")
+        stdout = stdout.strip()
+
+        if proc.returncode != 0:
+            logger.error(f"Git command failed with code {proc.returncode}: {stdout}")
+
+        return stdout, proc.returncode
     except FileNotFoundError:
+        logger.error("git command not found")
         return "git command not found", 127
     except Exception as e:
         logger.error(f"Git command failed: {e}")

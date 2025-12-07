@@ -125,10 +125,27 @@ def render_git_diff(raw: str) -> None:
     render_simple_block("📊 Git Diff", raw, border_style="yellow")
 
 
-def render_test_results(summary: str, output: str) -> None:
-    """Render test results with summary and output."""
-    combined = f"[bold]{summary}[/]\n\n{output.strip()}"
-    render_simple_block("🧪 Test Results", combined, border_style="magenta")
+def render_test_results(result: dict) -> None:
+    """Render test results with summary and truncated output."""
+    summary = result.get("summary", "Test run finished.")
+    stdout = (result.get("stdout") or "").strip()
+
+    # Show a clear summary at the top
+    show_panel("Tests summary", summary, border_style="bold magenta")
+
+    # Show first part of the output in a panel
+    if not stdout:
+        show_panel("Tests output", "[dim]No test output.[/]")
+        return
+
+    # Limit to first 80 lines for readability
+    lines = stdout.splitlines()
+    max_lines = 80
+    visible = "\n".join(lines[:max_lines])
+    if len(lines) > max_lines:
+        visible += f"\n\n[dim]... and {len(lines) - max_lines} more lines[/]"
+
+    show_panel("Tests output", visible, border_style="magenta")
 
 
 def render_smart_commit(result: dict) -> None:
