@@ -16,10 +16,11 @@
 - 🧠 **Hybrid Intelligence**: Uses local **SetFit** models for instant reactions to common commands, falling back to LLMs for complex intent.
 - 🛡️ **Simplified Safety**: Dangerous commands (`push`, `smart_commit`, `reset`) ask for a simple keyboard "Yes/No". No complex voice confirmations.
 - ⚡ **Smart Commit**: Single command: "status -> stage -> generate message -> commit -> push".
+- 🎨 **Rich TUI**: Beautiful terminal interface with animated spinners, status indicators, and formatted Git output using Rich library.
 - 🔄 **Robustness**: Automatic retries for flaky commands and network issues.
 - 📊 **Metrics**: Tracks usage stats for improvement.
 - 🔌 **Model Agnostic**: Bring your own keys! Supports **Groq**, **Gemini**, **Ollama**, and **Faster-Whisper**.
-- 🔧 **Full Git Toolkit**: Complete set of Git operations including log, add, reset, branch management, and more.
+- 🔧 **Full Git Toolkit**: Complete set of Git operations including log, add, reset, branch management, stash, revert, merge, and more.
 
 ## 🏗️ Architecture
 
@@ -132,6 +133,12 @@ Follow the on-screen prompts:
 - *"Run tests"*
 - *"Pull from origin"*
 - *"Push to origin main"*
+- *"Fetch latest changes"* (Fetch from remote)
+- *"Show remotes"* (List configured remotes)
+- *"Stash my changes"* (Save work temporarily)
+- *"Apply the last stash"* (Restore stashed changes)
+- *"Revert my last commit"* (Create inverse commit)
+- *"Merge the feature branch"* (Merge a branch)
 
 ## 📂 Project Structure
 
@@ -181,4 +188,4 @@ GitVoice includes an MCP server that you can connect to IDEs like **Claude Deskt
 }
 ```
 
-Available tools: `git_status`, `git_log`, `git_add_all`, `git_reset`, `run_tests`, `git_diff`, `git_branch`, `smart_commit_push`, `git_pull`.
+Available tools: `git_status`, `git_log`, `git_add_all`, `git_reset`, `run_tests`, `git_diff`, `git_branch`, `smart_commit_push`, `git_pull`, `git_fetch`, `git_remote_list`, `git_stash_push`, `git_stash_pop`, `git_revert`, `git_merge`.

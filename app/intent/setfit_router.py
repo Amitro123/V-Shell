@@ -70,6 +70,38 @@ TRAIN_EXAMPLES = [
     ("sync with origin main", "git.pull"),
     ("update code", "git.pull"),
 
+    # git.fetch
+    ("fetch latest changes", "git.fetch"),
+    ("git fetch", "git.fetch"),
+    ("fetch from origin", "git.fetch"),
+    ("update remote refs", "git.fetch"),
+
+    # git.remote_list
+    ("show remotes", "git.remote_list"),
+    ("show git remotes", "git.remote_list"),
+    ("where do we push to", "git.remote_list"),
+    ("list remotes", "git.remote_list"),
+
+    # git.stash
+    ("stash my changes", "git.stash_push"),
+    ("save my work in a stash", "git.stash_push"),
+    ("stash these changes", "git.stash_push"),
+    ("apply the last stash", "git.stash_pop"),
+    ("restore the last stash", "git.stash_pop"),
+    ("pop the stash", "git.stash_pop"),
+
+    # git.revert
+    ("revert my last commit", "git.revert"),
+    ("undo the last commit with revert", "git.revert"),
+    ("revert that commit", "git.revert"),
+    ("create a revert commit", "git.revert"),
+
+    # git.merge
+    ("merge the feature branch", "git.merge"),
+    ("merge branch feature-login into current", "git.merge"),
+    ("merge develop", "git.merge"),
+    ("merge that branch", "git.merge"),
+
     # help / fallback
     ("what can you do", "help"),
     ("help", "help"),

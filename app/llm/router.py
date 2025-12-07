@@ -12,13 +12,19 @@ You must return a SINGLE JSON object matching the ToolCall schema. Do not return
 
 Available tools:
 - git.status: Check status
-- git.log: Show commit history (params: n [default 5])
+- git.log: Show commit history (params: limit [default 20])
 - git.diff: Show changes (params: path [optional], since_origin_main [boolean])
 - git.add_all: Stage all changes
 - git.commit: Commit changes (params: message [required])
 - git.push: Push to remote (params: remote [default origin], branch [optional])
 - git.pull: Pull from remote (params: remote [default origin], branch [optional])
-- git.reset: Reset changes (params: mode [soft, mixed, hard], steps [default 1])
+- git.fetch: Fetch updates from remote (params: remote [optional])
+- git.remote_list: List configured remotes (no params)
+- git.stash_push: Stash current changes (params: message [optional])
+- git.stash_pop: Apply and drop most recent stash (no params)
+- git.revert: Revert a commit safely (params: commit [optional, defaults to HEAD])
+- git.merge: Merge a branch (params: branch [required])
+- git.reset: Reset changes (params: mode [soft, mixed, hard], steps [default 1, max 3])
 - git.branch: Create or switch branches (params: name [required], create [boolean, default false])
 - git.run_tests: Run the project's test suite
 - git.smart_commit_push: Automatically stage, commit (with generated message), and push
@@ -35,6 +41,12 @@ Rules:
 - For "run tests" or "test my code", use git.run_tests.
 - For "smart commit" or "commit and push", use git.smart_commit_push.
 - For "pull" or "update code", use git.pull.
+- For "fetch" or "fetch latest", use git.fetch.
+- For "show remotes" or "list remotes", use git.remote_list.
+- For "stash" or "save changes temporarily", use git.stash_push.
+- For "apply stash" or "restore stash", use git.stash_pop.
+- For "revert commit" or "undo with revert", use git.revert.
+- For "merge branch", use git.merge with branch parameter.
 - If the user asks to "fix conflicts", use 'help' for now as it's not fully implemented.
 - If the user mentions more than one Git action in a single utterance (e.g. status + add/commit/push), you MUST return a single tool: git.smart_commit_push with appropriate parameters. Never return git.status or git.add or git.commit alone for such compound commands.
 - For compound commands like "status and commit", "add and push", or "do everything", use git.smart_commit_push.
@@ -53,7 +65,7 @@ Output JSON format:
     "confirmation_required": boolean,
     "explanation": "brief explanation"
 }
-Set confirmation_required = true for: commit, push, pull, reset, checkout (if switching branches might lose work), smart_commit_push.
+Set confirmation_required = true for: commit, push, pull, reset, checkout (if switching branches might lose work), smart_commit_push, stash_push, stash_pop, revert, merge.
 """
 
 class Brain:

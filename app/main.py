@@ -7,11 +7,24 @@ from rich.panel import Panel
 from app.config import load_config
 from app.audio.recorder import AudioRecorder
 from app.audio.stt import Transcriber
+from app.audio.feedback import play_start_listening_sound, play_stop_listening_sound
 from app.llm.router import Brain
 from app.core.executor import execute_tool
 from app.core.models import ToolCall
 from app.core.metrics import MetricsLogger
 from app.core.policies import TOOL_POLICIES, ToolPolicy
+from app.cli.ui import (
+    show_status,
+    show_error,
+    show_success,
+    spinner,
+    render_git_status,
+    render_git_log,
+    render_git_diff,
+    render_test_results,
+    render_smart_commit,
+    render_simple_block,
+)
 
 # Configure logging
 logging.basicConfig(
@@ -63,10 +76,12 @@ async def main():
         attempts = policy.retries + 1
         for i in range(attempts):
             try:
-                console.print(f"[dim]Executing {tool_call.tool} (attempt {i+1}/{attempts})...[/dim]")
                 start_time = asyncio.get_event_loop().time()
-                # Call stateless executor
-                result_dict = await execute_tool(tool_call, config=config, brain=brain, console=console)
+                
+                # Call stateless executor with spinner
+                with spinner(f"Executing {tool_call.tool}..."):
+                    result_dict = await execute_tool(tool_call, config=config, brain=brain, console=console)
+                
                 end_time = asyncio.get_event_loop().time()
                 duration = (end_time - start_time) * 1000
 
@@ -90,60 +105,80 @@ async def main():
                 )
 
                 if is_success:
-                    console.print(Panel(stdout, title="[bold green]Success[/bold green]", border_style="green"))
+                    # Render output based on tool type
+                    tool = tool_call.tool
+                    
+                    if tool == "git.status":
+                        render_git_status(stdout)
+                    elif tool == "git.log":
+                        render_git_log(stdout)
+                    elif tool == "git.diff":
+                        render_git_diff(stdout)
+                    elif tool == "git.run_tests":
+                        summary = result_dict.get("summary", "Test run finished")
+                        render_test_results(summary, stdout)
+                    elif tool == "git.smart_commit_push":
+                        render_smart_commit(result_dict)
+                    else:
+                        # Generic rendering for other tools
+                        render_simple_block(tool, stdout)
+                    
+                    show_success(f"✓ {tool} completed successfully")
                     return
                 
                 if should_retry and i < attempts - 1:
-                    console.print(f"[yellow]Command failed with code {exit_code}. Retrying...[/yellow]")
+                    show_error(f"Command failed with code {exit_code}. Retrying...")
                     await asyncio.sleep(0.5)
                     continue
                 
                 # Final failure
-                console.print(Panel(stderr, title="[bold red]Error[/bold red]", border_style="red"))
+                show_error(f"{tool_call.tool} failed with exit code {exit_code}")
+                if stderr:
+                    render_simple_block("Error Details", stderr, border_style="red")
                 return
 
             except Exception as e:
-                console.print(f"[bold red]Exception during execution:[/bold red] {e}")
+                show_error(f"Exception during execution: {e}")
                 metrics_logger.log(raw_text, tool_call.tool, success=False, error=str(e))
                 if i == attempts - 1:
                     return
 
     try:
         while True:
-            console.print("\n[bold blue]Press Enter to START recording (or 'q' to quit)...[/bold blue]")
+            show_status("\nPress Enter to START recording (or 'q' to quit)...", style="bold white")
             cmd = input().strip().lower()
             if cmd == 'q':
                 break
             
             # 1. Start Recording
+            play_start_listening_sound()
             recorder.start_recording()
-            
-            # 2. Stop Recording
-            console.print("[bold red]Recording... Press Enter to STOP.[/bold red]")
+            show_status("🎙️  Recording... Press Enter to STOP.", style="bold yellow")
             input()
             audio_path = recorder.stop_recording()
+            play_stop_listening_sound()
             
             if not audio_path:
-                console.print("[red]No audio captured.[/red]")
+                show_error("No audio captured.")
                 continue
 
             console.print(f"[dim]Saved audio: {audio_path}[/dim]")
             
             # 2. Transcribe
-            with console.status("[dim]Transcribing...[/dim]"):
+            with spinner("Transcribing audio..."):
                 stt_result = await transcriber.transcribe(audio_path)
             
             if not stt_result.text:
-                console.print("[red]Could not understand anything, please try again.[/red]")
+                show_error("Could not understand anything, please try again.")
                 continue
                 
-            console.print(f"[bold]Heard:[/bold] \"{stt_result.text}\"")
+            console.print(f"[bold cyan]Heard:[/bold cyan] \"{stt_result.text}\"")
             
             # 3. Brain
-            with console.status("[dim]Thinking...[/dim]"):
+            with spinner("Thinking..."):
                 tool_call = await brain.process(stt_result.text)
             
-            console.print(f"[dim]Planned action:[/dim] {tool_call.tool} ({tool_call.params})")
+            console.print(f"[dim]→ Planned action:[/dim] [bold]{tool_call.tool}[/bold] {tool_call.params}")
             
             if tool_call.tool == "help": # Check string literal
                 console.print(f"[yellow]{tool_call.explanation}[/yellow]")

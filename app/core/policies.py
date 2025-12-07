@@ -21,4 +21,10 @@ TOOL_POLICIES: Dict[str, ToolPolicy] = {
     "git.checkout_branch": ToolPolicy(True, 0, []),
     "git.create_branch": ToolPolicy(True, 0, []),
     "git.branch": ToolPolicy(True, 0, []),
+    "git.fetch": ToolPolicy(False, 0, []),
+    "git.remote_list": ToolPolicy(False, 0, []),
+    "git.stash_push": ToolPolicy(True, 0, []),
+    "git.stash_pop": ToolPolicy(True, 0, []),
+    "git.revert": ToolPolicy(True, 0, []),
+    "git.merge": ToolPolicy(True, 0, []),
 }

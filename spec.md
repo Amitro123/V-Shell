@@ -32,6 +32,12 @@ Supported commands include:
 - `git commit`: Commit changes with AI-generated or user-provided messages.
 - `git push`: Push commits to remote.
 - `git pull`: Pull changes from remote.
+- `git fetch`: Fetch updates from remote (optional remote parameter).
+- `git remote list`: List configured remotes (`git remote -v`).
+- `git stash push`: Stash current changes (optional message parameter).
+- `git stash pop`: Apply and drop the most recent stash.
+- `git revert`: Safely revert a commit by creating an inverse commit (optional commit parameter, defaults to HEAD).
+- `git merge`: Merge a branch into the current branch (requires branch parameter).
 - `git reset`: Safely reset HEAD with strict safety limits:
     - Modes: `soft`, `mixed`, `hard`
     - Steps limited to 1-3 commits for safety
@@ -42,6 +48,18 @@ Supported commands include:
     - Switch to existing branch: `git.branch(name="main", create=False)`
 - `smart commit`: Automatically stage, generate message (with user confirmation), commit, and push.
 - `run tests`: Run project tests (e.g., pytest) with formatted summary output.
+
+### UI/UX & Feedback
+- **Rich TUI**: Beautiful terminal interface using the Rich library:
+    - **Status Indicators**: Clear visual feedback for each phase (Recording, Transcribing, Thinking, Executing).
+    - **Animated Spinners**: Dots spinner for async operations (STT, LLM routing, tool execution).
+    - **Formatted Output**: Tool-specific rendering:
+        - `git.status`: Rich table with file status icons (📝 Modified, ➕ Added, ❌ Deleted, ❓ Untracked).
+        - `git.log`, `git.diff`: Formatted panels with syntax highlighting.
+        - `git.smart_commit_push`: Multi-panel output showing status, commit message, commit output, and push output.
+        - Other tools: Generic panels with appropriate styling.
+    - **Success/Error Messages**: Color-coded messages with clear indicators (✓ for success, Error: prefix for failures).
+- **Audio Feedback**: Placeholder functions for future audio cues (start/stop listening sounds).
 
 ### Safety & Configuration
 - **Tool Policies**: Granular control over safety and retries via `ToolPolicy`.
@@ -62,6 +80,12 @@ Supported commands include:
     - `git_branch`: Create or switch branches.
     - `smart_commit_push`: Auto-stage, commit, push (client handles confirmation).
     - `git_pull`: Pulls changes.
+    - `git_fetch`: Fetch updates from remote.
+    - `git_remote_list`: List configured remotes.
+    - `git_stash_push`: Stash current changes.
+    - `git_stash_pop`: Apply and drop most recent stash.
+    - `git_revert`: Revert a commit safely.
+    - `git_merge`: Merge a branch.
 - **Entry Point**: `app/mcp/server.py`
 
 ## Architecture

@@ -14,6 +14,11 @@ from app.core.tools.git_ops.branch import git_checkout_branch
 from app.core.tools.git_ops.log import git_log
 from app.core.tools.git_ops.add import git_add_all
 from app.core.tools.git_ops.reset import git_reset
+from app.core.tools.git_ops.fetch import git_fetch
+from app.core.tools.git_ops.remote import git_remote_list
+from app.core.tools.git_ops.stash import git_stash_push, git_stash_pop
+from app.core.tools.git_ops.revert import git_revert
+from app.core.tools.git_ops.merge import git_merge
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +37,12 @@ TOOL_REGISTRY: Dict[str, ToolFunc] = {
     "git.log": git_log,
     "git.add_all": git_add_all,
     "git.reset": git_reset,
+    "git.fetch": git_fetch,
+    "git.remote_list": git_remote_list,
+    "git.stash_push": git_stash_push,
+    "git.stash_pop": git_stash_pop,
+    "git.revert": git_revert,
+    "git.merge": git_merge,
 }
 
 # Simple tools config
@@ -94,6 +105,11 @@ async def execute_tool(tool_call: ToolCall, config: AppConfig = None, brain=None
             # Map 'commits' (from LLM) to 'steps' (impl)
             if "commits" in params:
                 call_params["steps"] = params.pop("commits")
+        
+        if name == "git.log":
+            # Map 'n' (legacy) to 'limit' (current)
+            if "n" in params and "limit" not in params:
+                call_params["limit"] = params.pop("n")
 
         if name == "git.run_tests":
              result = await func(**call_params)
